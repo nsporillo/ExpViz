@@ -117,5 +117,6 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 .idea/*
-images/*
-labels/*
+data/*
+data/images/*
+.DS_Store
