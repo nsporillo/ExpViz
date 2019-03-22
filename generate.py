@@ -6,6 +6,11 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
+try:
+    import cv2.__init__ as cv
+except ImportError:
+    pass
+
 datadir = 'data/'
 
 
@@ -41,7 +46,7 @@ def main():
 
     fonts = [cv.FONT_HERSHEY_SIMPLEX, cv.FONT_HERSHEY_DUPLEX, cv.FONT_HERSHEY_COMPLEX]
     alphabet = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',
-                'l', 'o', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '=', '*', '+', '-', '(', ')']
+                'l', 'o', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '.', '=', '*', '+', '-', '(', ')']
     blurs = [1, 3, 5]
 
     x = 0
