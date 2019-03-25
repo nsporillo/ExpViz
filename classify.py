@@ -101,7 +101,7 @@ def process(img, minconf):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Classify symbols in an image.')
     parser.add_argument('-f', '--file', type=str, help='Image file', required=True)
-    parser.add_argument('-mc', '--minconf', type=str, default='50.0', help='Minimum Confidence Threshold')
+    parser.add_argument('-mc', '--minconf', type=str, default='40.0', help='Minimum Confidence Threshold')
     args = parser.parse_args()
 
     # Load trained model and classify the given image
