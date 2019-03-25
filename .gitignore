@@ -120,3 +120,4 @@ $RECYCLE.BIN/
 data/*
 data/images/*
 .DS_Store
+*.mat
