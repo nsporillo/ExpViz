@@ -11,9 +11,6 @@ try:
 except ImportError:
     pass
 
-imgSize = (1288, 966)
-
-
 def load_model(bin_dir):
     # load YAML and create model
     yaml_file = open('%s/model.yaml' % bin_dir, 'r')
@@ -69,13 +66,11 @@ def process(img, minconf):
     th2 = cv.erode(th2, np.ones((3, 3), dtype=np.uint8), iterations=1)
     nb_components, _, stats, _ = cv.connectedComponentsWithStats(cv.bitwise_not(th2), connectivity=8)
     stats = sorted(stats, key=lambda x: (x[0], x[1]))
-    print(stats)
     bounds = to_bgr(th2)
     symbols = []
 
     for i in range(1, nb_components):
         sleft, stop, swidth, sheight, sarea = stats[i][0], stats[i][1], stats[i][2], stats[i][3], stats[i][4]
-        print(sleft, stop, swidth, sarea)
         dbbox = th2[stop:(stop + sheight), sleft:(sleft + swidth)]
         ci = flood_fill(dbbox)
         #cv.imshow('Connected Component', ci)
