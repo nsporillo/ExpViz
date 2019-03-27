@@ -2,10 +2,9 @@ import argparse
 import os
 import pickle
 
-import keras
 import hasy_tools
+import keras
 import numpy as np
-import tensorflow as tf
 from keras.layers import MaxPooling2D, Convolution2D, Dropout, Dense, Flatten
 from keras.models import Sequential, save_model
 from keras.utils import np_utils
@@ -57,15 +56,17 @@ def load_hasy_data(height=28, width=28):
     # Load training data
     max_ = data['x_train'].shape[0]
     training_images = (data['x_train'][:max_]).reshape(max_, 32, 32, 1)
-    training_images = tf.cast(training_images, tf.float32)
-    training_images = tf.image.resize_images(training_images, (height, width))
+    training_images = training_images[:, 2:30, 2:30, :].reshape(max_, 28, 28, 1)
     training_labels = data['y_train'][:max_]
 
     max_ = data['x_test'].shape[0]
     testing_images = (data['x_test'][:max_]).reshape(max_, 32, 32, 1)
-    testing_images = tf.cast(testing_images, tf.float32)
-    testing_images = tf.image.resize_images(testing_images, (height, width))
+    testing_images = testing_images[:, 2:30, 2:30, :].reshape(max_, 28, 28, 1)
     testing_labels = data['y_test'][:max_]
+
+    # Convert type to float32
+    training_images = training_images.astype('float32')
+    testing_images = testing_images.astype('float32')
 
     # Normalize to prevent issues with model
     training_images /= 255
@@ -74,22 +75,7 @@ def load_hasy_data(height=28, width=28):
     return (training_images, training_labels), (testing_images, testing_labels), len(data['labels'])
 
 
-def combine_data(src1, src2):
-    (x1_train, y1_train), (x1_test, y1_test), c1 = src1
-    (x2_train, y2_train), (x2_test, y2_test), c2 = src2
-    print(x1_train.shape, y1_train.shape, x1_test.shape, y1_test.shape)
-    print(x2_train.shape, y2_train.shape, x2_test.shape, y2_test.shape)
-    x_train = np.vstack((x1_train, x2_train))
-    y_train = np.vstack((y1_train, y2_train))
-    x_test = np.vstack((x1_test, x2_test))
-    y_test = np.vstack((y1_test, y2_test))
-    print('Data combined to:')
-    print(x_train.shape, y_train.shape, x_test.shape, y_test.shape)
-    return (x_train, y_train), (x_test, y_test), c1+c2
-
-
-def build_net(training_data, width=28, height=28):
-    _, _, num_classes = training_data
+def build_net(num_classes, width=28, height=28):
     input_shape = (height, width, 1)
 
     model = Sequential()
@@ -118,12 +104,29 @@ def build_net(training_data, width=28, height=28):
     return model
 
 
-def train(model, training_data, batch_size=256, epochs=10):
-    (x_train, y_train), (x_test, y_test), nb_classes = training_data
+def train(model, emnist, hasy, num_classes, batch_size=256, epochs=5):
+    (x_train, y_train), (x_test, y_test), _ = emnist
 
     # convert class vectors to binary class matrices
-    y_train = np_utils.to_categorical(y_train, nb_classes)
-    y_test = np_utils.to_categorical(y_test, nb_classes)
+    y_train = np_utils.to_categorical(y_train, num_classes)
+    y_test = np_utils.to_categorical(y_test, num_classes)
+    print('Training on EMNIST data')
+    model.fit(x_train, y_train,
+              batch_size=batch_size,
+              epochs=epochs,
+              verbose=1,
+              validation_data=(x_test, y_test))
+
+    score = model.evaluate(x_test, y_test, verbose=0)
+    print('Test score:', score[0])
+    print('Test accuracy:', score[1])
+    print('Training on Hasy data')
+    (x_train, y_train), (x_test, y_test), _ = hasy
+    print(type(x_train), type(y_train), type(x_test), type(y_test))
+    # convert class vectors to binary class matrices
+    y_train = np_utils.to_categorical(y_train, num_classes)
+    y_test = np_utils.to_categorical(y_test, num_classes)
+    print(type(x_train), type(y_train), type(x_test), type(y_test))
 
     model.fit(x_train, y_train,
               batch_size=batch_size,
@@ -132,6 +135,7 @@ def train(model, training_data, batch_size=256, epochs=10):
               validation_data=(x_test, y_test))
 
     score = model.evaluate(x_test, y_test, verbose=0)
+
     print('Test score:', score[0])
     print('Test accuracy:', score[1])
 
@@ -145,7 +149,7 @@ def train(model, training_data, batch_size=256, epochs=10):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(usage='Program to train a CNN for character detection')
     parser.add_argument('-f', '--file', type=str, help='File to use for training', required=True)
-    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train on')
+    parser.add_argument('--epochs', type=int, default=5, help='Number of epochs to train on')
     args = parser.parse_args()
 
     bin_dir = os.path.dirname(os.path.realpath(__file__)) + '/bin'
@@ -156,8 +160,7 @@ if __name__ == '__main__':
     print('EMNIST data loaded ' + str(emnist_data[2]) + ' classes')
     hasy_data = load_hasy_data()
     print('Hasy data loaded ' + str(hasy_data[2]) + ' classes')
-    training_data = combine_data(emnist_data, hasy_data)
-    print('Merged training data. Building and training neural network...')
 
-    model = build_net(training_data)
-    train(model, training_data, epochs=args.epochs)
+    num_classes = emnist_data[2] + hasy_data[2]
+    model = build_net(num_classes)
+    train(model, emnist_data, hasy_data, num_classes, epochs=args.epochs)
