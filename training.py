@@ -1,6 +1,7 @@
 import argparse
 import os
 import pickle
+import cv2 as cv
 
 import hasy_tools
 import keras
@@ -33,6 +34,9 @@ def load_emnist_data(mat_file_path, width=28, height=28):
     for i in range(len(training_images)):
         training_images[i] = np.rot90(np.fliplr(training_images[i]))
 
+    #cv.imshow('w', training_images[1])
+    #cv.waitKey()
+
     # Reshape testing data
     _len = len(testing_images)
     for i in range(len(testing_images)):
@@ -41,6 +45,7 @@ def load_emnist_data(mat_file_path, width=28, height=28):
     # Convert type to float32
     training_images = training_images.astype('float32')
     testing_images = testing_images.astype('float32')
+
 
     # Normalize to prevent issues with model
     training_images /= 255
@@ -57,6 +62,8 @@ def load_hasy_data(height=28, width=28):
     max_ = data['x_train'].shape[0]
     training_images = (data['x_train'][:max_]).reshape(max_, 32, 32, 1)
     training_images = training_images[:, 2:30, 2:30, :].reshape(max_, 28, 28, 1)
+    cv.imshow('w', training_images[1])
+    cv.waitKey()
     training_labels = data['y_train'][:max_]
 
     max_ = data['x_test'].shape[0]
@@ -163,4 +170,4 @@ if __name__ == '__main__':
 
     num_classes = emnist_data[2] + hasy_data[2]
     model = build_net(num_classes)
-    train(model, emnist_data, hasy_data, num_classes, epochs=args.epochs)
+    #train(model, emnist_data, hasy_data, num_classes, epochs=args.epochs)

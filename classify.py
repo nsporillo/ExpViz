@@ -6,10 +6,6 @@ from keras.models import model_from_yaml
 import numpy as np
 import pickle
 
-try:
-    import cv2.__init__ as cv
-except ImportError:
-    pass
 
 def load_model(bin_dir):
     # load YAML and create model
@@ -79,15 +75,20 @@ def process(img, minconf):
         symbols.append(ci)
         cv.rectangle(bounds, (sleft, stop), (sleft + swidth, stop + sheight), (0, 0, 255), thickness=2)
 
-    print(len(symbols))
+    print(len(symbols), len(mapping))
     for s in symbols:
         s = cv.resize(s, (28, 28))
         sym = np.invert(s).reshape(1, 28, 28, 1).astype('float32')
         sym /= 255
         result = model.predict(sym)
+        print("Prediction: {}".format(str(prediction[0][:3])))
         conf = str(max(result[0]) * 100)
         if float(conf) > float(minconf):
-            print("Prediction: [" + chr(mapping[(int(np.argmax(result, axis=1)[0]))]) + "] Confidence: " + conf)
+            index = (int(np.argmax(result, axis=1)[0]))
+            if index <= len(mapping):
+                print("[EMNIST]Prediction: [" + chr(mapping[(int(np.argmax(result, axis=1)[0]))]) + "] Confidence: " + conf)
+            else:
+                print("[Hasy]Prediction: [" + str(np.argmax(result, axis=1)[0]) + "] Confidence: " + conf)
 
     cv.imshow('Boxes', bounds)
     cv.waitKey()
