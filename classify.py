@@ -81,14 +81,10 @@ def process(img, minconf):
         sym = np.invert(s).reshape(1, 28, 28, 1).astype('float32')
         sym /= 255
         result = model.predict(sym)
-        print("Prediction: {}".format(str(prediction[0][:3])))
         conf = str(max(result[0]) * 100)
         if float(conf) > float(minconf):
-            index = (int(np.argmax(result, axis=1)[0]))
-            if index <= len(mapping):
-                print("[EMNIST]Prediction: [" + chr(mapping[(int(np.argmax(result, axis=1)[0]))]) + "] Confidence: " + conf)
-            else:
-                print("[Hasy]Prediction: [" + str(np.argmax(result, axis=1)[0]) + "] Confidence: " + conf)
+            index = int(np.argmax(result, axis=1)[0])
+            print("Prediction: [" + mapping[index] + "] Confidence: " + conf)
 
     cv.imshow('Boxes', bounds)
     cv.waitKey()

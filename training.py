@@ -16,13 +16,13 @@ def load_emnist_data(mat_file_path, width=28, height=28):
     mat = loadmat(mat_file_path)
 
     # Load character mapping
-    mapping = {kv[0]: kv[1:][0] for kv in mat['dataset'][0][0][2]}
-    pickle.dump(mapping, open('bin/mapping.p', 'wb'))
+    mapping = {kv[0]: chr(kv[1:][0]) for kv in mat['dataset'][0][0][2]}
 
     # Load training data
     max_ = len(mat['dataset'][0][0][0][0][0][0])
     training_images = mat['dataset'][0][0][0][0][0][0][:max_].reshape(max_, height, width, 1)
     training_labels = mat['dataset'][0][0][0][0][0][1][:max_]
+    print(training_labels[0], training_labels[1])
 
     # Load testing data
     max_ = int(max_ / 6)
@@ -33,9 +33,6 @@ def load_emnist_data(mat_file_path, width=28, height=28):
     _len = len(training_images)
     for i in range(len(training_images)):
         training_images[i] = np.rot90(np.fliplr(training_images[i]))
-
-    #cv.imshow('w', training_images[1])
-    #cv.waitKey()
 
     # Reshape testing data
     _len = len(testing_images)
@@ -53,23 +50,30 @@ def load_emnist_data(mat_file_path, width=28, height=28):
 
     nb_classes = len(mapping)
 
-    return (training_images, training_labels), (testing_images, testing_labels), nb_classes
+    return (training_images, training_labels), (testing_images, testing_labels), nb_classes, mapping
 
 
-def load_hasy_data(height=28, width=28):
+def load_hasy_data(width=28, height=28):
     data = hasy_tools.load_data()
     # Load training data
     max_ = data['x_train'].shape[0]
-    training_images = (data['x_train'][:max_]).reshape(max_, 32, 32, 1)
-    training_images = training_images[:, 2:30, 2:30, :].reshape(max_, 28, 28, 1)
-    cv.imshow('w', training_images[1])
-    cv.waitKey()
-    training_labels = data['y_train'][:max_]
+    pre_train_images = (data['x_train'][:max_]).reshape(max_, 32, 32, 1)
+    training_images = np.zeros((max_, 28, 28, 1), dtype=np.float32)
+    for i in range(0, max_):
+        training_images[i] = np.expand_dims(
+            np.invert(cv.resize(pre_train_images[i], (height, width), interpolation=cv.INTER_LANCZOS4)), axis=2)
+    del pre_train_images
+    training_labels = data['y_train'][:max_] + 62
+    print('Hasy', training_labels[0], training_labels[max_-2])
 
     max_ = data['x_test'].shape[0]
-    testing_images = (data['x_test'][:max_]).reshape(max_, 32, 32, 1)
-    testing_images = testing_images[:, 2:30, 2:30, :].reshape(max_, 28, 28, 1)
-    testing_labels = data['y_test'][:max_]
+    pre_test_images = (data['x_test'][:max_]).reshape(max_, 32, 32, 1)
+    testing_images = np.zeros((max_, 28, 28, 1), dtype=np.float32)
+    for i in range(0, max_):
+        testing_images[i] = np.expand_dims(
+            np.invert(cv.resize(pre_test_images[i], (height, width), interpolation=cv.INTER_LANCZOS4)), axis=2)
+    del pre_test_images
+    testing_labels = data['y_test'][:max_] + 62
 
     # Convert type to float32
     training_images = training_images.astype('float32')
@@ -79,7 +83,7 @@ def load_hasy_data(height=28, width=28):
     training_images /= 255
     testing_images /= 255
 
-    return (training_images, training_labels), (testing_images, testing_labels), len(data['labels'])
+    return (training_images, training_labels), (testing_images, testing_labels), len(data['labels']), data['labels']
 
 
 def build_net(num_classes, width=28, height=28):
@@ -111,13 +115,46 @@ def build_net(num_classes, width=28, height=28):
     return model
 
 
-def train(model, emnist, hasy, num_classes, batch_size=256, epochs=5):
-    (x_train, y_train), (x_test, y_test), _ = emnist
+def merge(emnist, hasy):
+    (x1_train, y1_train), (x1_test, y1_test), _, _ = emnist
+    (x2_train, y2_train), (x2_test, y2_test), _, _ = hasy
+    print(y1_train.shape, y1_test.shape, y2_train.shape, y2_test.shape)
+    x_train = np.zeros((x1_train.shape[0] + x2_train.shape[0], 28, 28, 1))
+
+    for i in range(0, x1_train.shape[0]):
+        x_train[i] = x1_train[i]
+    for i in range(0, x2_train.shape[0]):
+        x_train[x1_train.shape[0] + i] = x2_train[i]
+
+    y_train = np.zeros((y1_train.shape[0] + y2_train.shape[0], 1))
+    for i in range(0, y1_train.shape[0]):
+        y_train[i] = y1_train[i]
+    for i in range(0, y2_train.shape[0]):
+        y_train[y1_train.shape[0] + i] = y2_train[i]
+
+    x_test = np.zeros((x1_test.shape[0] + x2_test.shape[0], 28, 28, 1))
+
+    for i in range(0, x1_test.shape[0]):
+        x_test[i] = x1_test[i]
+    for i in range(0, x2_test.shape[0]):
+        x_test[x1_test.shape[0] + i] = x2_test[i]
+
+    y_test = np.zeros((y1_test.shape[0] + y2_test.shape[0], 1))
+    for i in range(0, y1_test.shape[0]):
+        y_test[i] = y1_test[i]
+    for i in range(0, y2_test.shape[0]):
+        y_test[y1_test.shape[0] + i] = y2_test[i]
+
+    return x_train, y_train, x_test, y_test
+
+
+def train(model, training_data, num_classes, batch_size=256, epochs=5):
+    x_train, y_train, x_test, y_test = training_data
 
     # convert class vectors to binary class matrices
     y_train = np_utils.to_categorical(y_train, num_classes)
     y_test = np_utils.to_categorical(y_test, num_classes)
-    print('Training on EMNIST data')
+
     model.fit(x_train, y_train,
               batch_size=batch_size,
               epochs=epochs,
@@ -125,24 +162,6 @@ def train(model, emnist, hasy, num_classes, batch_size=256, epochs=5):
               validation_data=(x_test, y_test))
 
     score = model.evaluate(x_test, y_test, verbose=0)
-    print('Test score:', score[0])
-    print('Test accuracy:', score[1])
-    print('Training on Hasy data')
-    (x_train, y_train), (x_test, y_test), _ = hasy
-    print(type(x_train), type(y_train), type(x_test), type(y_test))
-    # convert class vectors to binary class matrices
-    y_train = np_utils.to_categorical(y_train, num_classes)
-    y_test = np_utils.to_categorical(y_test, num_classes)
-    print(type(x_train), type(y_train), type(x_test), type(y_test))
-
-    model.fit(x_train, y_train,
-              batch_size=batch_size,
-              epochs=epochs,
-              verbose=1,
-              validation_data=(x_test, y_test))
-
-    score = model.evaluate(x_test, y_test, verbose=0)
-
     print('Test score:', score[0])
     print('Test accuracy:', score[1])
 
@@ -156,7 +175,7 @@ def train(model, emnist, hasy, num_classes, batch_size=256, epochs=5):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(usage='Program to train a CNN for character detection')
     parser.add_argument('-f', '--file', type=str, help='File to use for training', required=True)
-    parser.add_argument('--epochs', type=int, default=5, help='Number of epochs to train on')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train on')
     args = parser.parse_args()
 
     bin_dir = os.path.dirname(os.path.realpath(__file__)) + '/bin'
@@ -164,10 +183,19 @@ if __name__ == '__main__':
         os.makedirs(bin_dir)
 
     emnist_data = load_emnist_data(args.file)
+    emnist_mapping = emnist_data[3]
     print('EMNIST data loaded ' + str(emnist_data[2]) + ' classes')
     hasy_data = load_hasy_data()
+    hasy_mapping = hasy_data[3]
     print('Hasy data loaded ' + str(hasy_data[2]) + ' classes')
 
+    mapping = emnist_mapping
+    k = len(mapping)
+    for i in range(0, len(hasy_mapping)):
+        mapping[k+i] = hasy_mapping[i]
+
+    print(mapping)
     num_classes = emnist_data[2] + hasy_data[2]
+    pickle.dump(mapping, open('bin/mapping.p', 'wb'))
     model = build_net(num_classes)
-    #train(model, emnist_data, hasy_data, num_classes, epochs=args.epochs)
+    train(model, merge(emnist_data, hasy_data), num_classes, epochs=args.epochs)
