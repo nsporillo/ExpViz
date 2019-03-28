@@ -3,6 +3,7 @@ import sys
 import cv2 as cv
 import argparse
 from keras.models import model_from_yaml
+from matplotlib import pyplot as plt
 import numpy as np
 import pickle
 
@@ -33,6 +34,19 @@ def load(path):
         sys.exit(0)
 
 
+def plot_images(imgs, title):
+    fig = plt.figure(figsize=(6, 6))
+    plt.title(title)
+    plt.axis('off')
+    columns, rows = 4, 5
+    ax = []
+    for i in range(0, min(len(imgs), 20)):
+        ax.append(fig.add_subplot(rows, columns, i + 1))
+        img = cv.applyColorMap(imgs[i], cv.COLORMAP_BONE)
+        plt.imshow(img)
+    plt.show()
+
+
 def flood_fill(img):
     im_f = cv.bitwise_not(img).copy()
     # Pad all edges of the image with zeros. Super important step
@@ -55,45 +69,64 @@ def to_bgr(im):
     return ret
 
 
+def deskew(img):
+    coords = np.column_stack(np.where(img < 255))
+    angle = cv.minAreaRect(coords)[-1]
+    if angle < -45:
+        angle = -(90 + angle)
+    else:
+        angle = -angle
+    (h, w) = img.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv.getRotationMatrix2D(center, angle, 1.0)
+    return cv.warpAffine(img, M, (w, h), flags=cv.INTER_CUBIC, borderMode=cv.BORDER_REPLICATE)
+
+
 def process(img, minconf):
     blur = cv.medianBlur(cv.medianBlur(img, 3), 3)
     _, th2 = cv.threshold(blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
-    th2 = cv.dilate(th2, np.ones((5, 5), dtype=np.uint8), iterations=2)
-    th2 = cv.erode(th2, np.ones((3, 3), dtype=np.uint8), iterations=1)
+    th2 = cv.dilate(th2, np.ones((3, 3), dtype=np.uint8), iterations=1)
+    th2 = cv.erode(th2, np.ones((5, 5), dtype=np.uint8), iterations=1)
+    th2 = deskew(th2)
     nb_components, _, stats, _ = cv.connectedComponentsWithStats(cv.bitwise_not(th2), connectivity=8)
     stats = sorted(stats, key=lambda x: (x[0], x[1]))
     bounds = to_bgr(th2)
-    symbols = []
+    res = to_bgr(np.ones((th2.shape[0], th2.shape[1]), dtype=np.uint8) * 255)
+    chars = []
+    areas = 0
 
     for i in range(1, nb_components):
         sleft, stop, swidth, sheight, sarea = stats[i][0], stats[i][1], stats[i][2], stats[i][3], stats[i][4]
-        dbbox = th2[stop:(stop + sheight), sleft:(sleft + swidth)]
-        ci = flood_fill(dbbox)
-        #cv.imshow('Connected Component', ci)
-        #cv.waitKey()
-        # Crop the bounding box of the symbol y:y+h, x:x+w
-        symbols.append(ci)
-        cv.rectangle(bounds, (sleft, stop), (sleft + swidth, stop + sheight), (0, 0, 255), thickness=2)
+        if sarea > 500:
+            areas+=sarea
+            # Crop the bounding box of the symbol y:y+h, x:x+w
+            dbbox = th2[stop:(stop + sheight), sleft:(sleft + swidth)]
+            ci = np.invert(cv.resize(flood_fill(dbbox), (28, 28)))
+            chars.append(ci)
+            ci = ci.reshape(1, 28, 28, 1).astype('float32') / 255
+            result = model.predict(ci)
+            conf = str(round(max(result[0]) * 100, 2))
 
-    print(len(symbols), len(mapping))
-    for s in symbols:
-        s = cv.resize(s, (28, 28))
-        sym = np.invert(s).reshape(1, 28, 28, 1).astype('float32')
-        sym /= 255
-        result = model.predict(sym)
-        conf = str(max(result[0]) * 100)
-        if float(conf) > float(minconf):
-            index = int(np.argmax(result, axis=1)[0])
-            print("Prediction: [" + mapping[index] + "] Confidence: " + conf)
+            if float(conf) > float(minconf):
+                index = int(np.argmax(result, axis=1)[0])
+                print("Pred= [" + mapping[index] + "] conf= " + conf + " area=" + str(sarea))
+                cv.putText(res, mapping[index], (sleft, stop), cv.FONT_HERSHEY_SIMPLEX, 3, (255, 0, 0), 3)
 
-    cv.imshow('Boxes', bounds)
-    cv.waitKey()
+            cv.rectangle(bounds, (sleft, stop), (sleft + swidth, stop + sheight), (0, 0, 255), thickness=2)
+
+    print('Average area: ' + str(areas/(nb_components - 1)))
+
+    bounds = cv.resize(bounds, None, fx=0.5, fy=0.5)
+    res = cv.resize(res, None, fx=0.5, fy=0.5)
+    plt.axis("off")
+    plt.imshow(np.vstack((bounds, res)))
+    plot_images(chars, 'Chars')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Classify symbols in an image.')
     parser.add_argument('-f', '--file', type=str, help='Image file', required=True)
-    parser.add_argument('-mc', '--minconf', type=str, default='40.0', help='Minimum Confidence Threshold')
+    parser.add_argument('-mc', '--minconf', type=str, default='5.0', help='Minimum Confidence Threshold')
     args = parser.parse_args()
 
     # Load trained model and classify the given image
