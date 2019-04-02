@@ -82,14 +82,16 @@ def deskew(img):
     M = cv.getRotationMatrix2D(center, angle, 1.0)
     return cv.warpAffine(img, M, (w, h), flags=cv.INTER_CUBIC, borderMode=cv.BORDER_REPLICATE)
 
-def padto(shape,i):
+
+def padto(shape, i):
     height, width = i.shape
     dheight, dwidth = shape
-    xpad = dwidth-width
-    xtuple = (int(xpad/2),xpad-int(xpad/2))
+    xpad = dwidth - width
+    xtuple = (int(xpad / 2), xpad - int(xpad / 2))
     ypad = dheight - height
-    ytuple = (int(ypad/2),ypad-int(ypad/2))
-    return np.pad(i,(ytuple,xtuple),'constant',constant_values=(255))
+    ytuple = (int(ypad / 2), ypad - int(ypad / 2))
+    return np.pad(i, (ytuple, xtuple), 'constant', constant_values=(255))
+
 
 def process(img, minconf):
     blur = cv.medianBlur(cv.medianBlur(img, 3), 3)
@@ -99,7 +101,7 @@ def process(img, minconf):
     th2 = cv.dilate(th2, np.ones((5, 5), dtype=np.uint8), iterations=1)
     th2 = deskew(th2)
     nb_components, _, stats, centroids = cv.connectedComponentsWithStats(cv.bitwise_not(th2), connectivity=8)
-    stats = radialNonsense.radialJoin(img,stats,centroids)
+    stats = radialNonsense.radialJoin(img, stats, centroids)
     stats = sorted(stats, key=lambda x: (x[0], x[1]))
     bounds = to_bgr(th2)
     res = to_bgr(np.ones((th2.shape[0], th2.shape[1]), dtype=np.uint8) * 255)
@@ -109,16 +111,18 @@ def process(img, minconf):
     for i in range(len(stats)):
         sleft, stop, swidth, sheight, sarea = stats[i][0], stats[i][1], stats[i][2], stats[i][3], stats[i][4]
         if sarea > 500:
-            areas+=sarea
+            areas += sarea
             # Crop the bounding box of the symbol y:y+h, x:x+w
-            dbbox = th2[stop:(stop + sheight), sleft:(sleft + swidth)]
-            scale = min(28.0/swidth,28.0/sheight)
-            ci = np.invert(padto((28,28),cv.resize(flood_fill(dbbox),(int(round(swidth*scale)),int(round(sheight*scale))))))
-            #ci = np.invert(cv.resize(flood_fill(dbbox), (28, 28)))
+            dbbox = th2[(stop - 2):(stop + sheight + 2), (sleft - 2):(sleft + swidth + 2)]
+            scale = min(28.0 / swidth, 28.0 / sheight)
+            ci = np.invert(padto((28, 28), cv.resize(flood_fill(dbbox),
+                                                     (int(round(swidth * scale)), int(round(sheight * scale))))))
+            # ci = np.invert(cv.resize(flood_fill(dbbox), (28, 28)))
             chars.append(ci)
             ci = ci.reshape(1, 28, 28, 1).astype('float32') / 255
             result = model.predict(ci)
             conf = str(round(max(result[0]) * 100, 2))
+            print(result)
             # TODO: over prioritize math symbols
             if float(conf) > float(minconf):
                 index = int(np.argmax(result, axis=1)[0])
@@ -127,7 +131,7 @@ def process(img, minconf):
 
             cv.rectangle(bounds, (sleft, stop), (sleft + swidth, stop + sheight), (0, 0, 255), thickness=2)
 
-    print('Average area: ' + str(areas/(nb_components - 1)))
+    print('Average area: ' + str(areas / (nb_components - 1)))
 
     bounds = cv.resize(bounds, None, fx=0.5, fy=0.5)
     res = cv.resize(res, None, fx=0.5, fy=0.5)
