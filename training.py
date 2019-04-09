@@ -161,19 +161,19 @@ def build_net(num_classes, width=28, height=28):
 
     model = Sequential()
     model.add(Convolution2D(32,
-                            (3, 3),
+                            (5, 5),
                             padding='valid',
                             input_shape=input_shape,
                             activation='relu'))
     model.add(Convolution2D(64,
-                            (3, 3),
+                            (5, 5),
                             activation='relu'))
 
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(rate=0.25))
 
     model.add(Flatten())
-    model.add(Dense(512, activation='relu'))
+    model.add(Dense(1024, activation='relu'))
     model.add(Dropout(rate=0.5))
     model.add(Dense(num_classes, activation='softmax'))
 
@@ -186,23 +186,29 @@ def build_net(num_classes, width=28, height=28):
     return model
 
 
-def train(model, training_data, num_classes, batch_size=256, epochs=15, plot=True):
+def train(model, training_data, mapping, num_classes, batch_size=256, epochs=50, plot=True):
     x_train, y_train, x_test, y_test = training_data
+
+    labels = list(mapping.values())
+    labels.append('')
+    ind = np.arange(num_classes)
+    width = .1
+    plt.figure()
+    hist = np.histogram(y_train, bins=num_classes)[0]
+    plt.bar(ind + width, hist, align='center', tick_label=labels)
+    plt.gca().set(title='Character Frequency Histogram', ylabel='Occurrences')
+    plt.show()
+
     start = time.time()
     print(str(np.unique(y_train)))
     # convert class vectors to binary class matrices
     y_train = np_utils.to_categorical(y_train, num_classes)
     y_test = np_utils.to_categorical(y_test, num_classes)
-    reduce_lr = keras.callbacks.ReduceLROnPlateau(monitor='val_loss',
-                                                  factor=0.2,
-                                                  patience=2,
-                                                  min_lr=0.001)
     history = model.fit(x_train, y_train,
                         batch_size=batch_size,
                         epochs=epochs,
                         verbose=1,
-                        validation_data=(x_test, y_test),
-                        callbacks=[reduce_lr])
+                        validation_data=(x_test, y_test))
 
     end = time.time()
     print('Training took ' + str(end-start) + ' seconds')
@@ -242,7 +248,7 @@ def train(model, training_data, num_classes, batch_size=256, epochs=15, plot=Tru
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(usage='Program to train a CNN for character detection')
     parser.add_argument('-f', '--file', type=str, help='File to use for training', required=True)
-    parser.add_argument('--epochs', type=int, default=15, help='Number of epochs to train on')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train on')
     args = parser.parse_args()
 
     bin_dir = os.path.dirname(os.path.realpath(__file__)) + '/bin'
@@ -252,7 +258,8 @@ if __name__ == '__main__':
     emnist_data = load_emnist_data(args.file)
     emnist_mapping = emnist_data[3]
     print('EMNIST data loaded ' + str(emnist_data[2]) + ' classes')
-    hasy_data = load_hasy_data(len(emnist_mapping), ['+', '-', '>', '<', '\\geq', '\\pi', '\\{', '\\}', '\\forall'])
+    hasy_data = load_hasy_data(len(emnist_mapping),
+                               ['\\pi', '\\{', '\\}', '\\forall', '\\doteq', '\\pm', '\\nabla'])
     hasy_mapping = hasy_data[3]
     print('Hasy data loaded ' + str(hasy_data[2]) + ' classes')
 
@@ -268,4 +275,4 @@ if __name__ == '__main__':
     print('Total classes: ' + str(num_classes))
     pickle.dump(mapping, open('bin/mapping.p', 'wb'))
     model = build_net(num_classes)
-    train(model, merge(emnist_data, hasy_data), num_classes, epochs=args.epochs)
+    train(model, merge(emnist_data, hasy_data), mapping, num_classes, epochs=args.epochs)
