@@ -58,8 +58,11 @@ while 1:
 
         # Predict and print
         result = model.predict(pred)
-        print("Pred= [" + mapping[int(np.argmax(result, axis=1)[0])] + "] conf= " + str(round(max(result[0]) * 100, 2)))
-
+        index = int(np.argmax(result, axis=1)[0])
+        if index <= len(mapping):
+            print("Pred= [" + mapping[index] + "] conf= " + str(round(max(result[0]) * 100, 2)))
+        else:
+            print('No prediction for mapping[' + str(index) + ']')
         # Reset the image in the drawing window
         img = np.zeros((112, 112, 3), np.uint8)
     elif key == ord('e'):
