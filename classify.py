@@ -1,12 +1,10 @@
-import os
 import sys
-import cv2 as cv
 import argparse
 from keras.models import model_from_yaml
 from matplotlib import pyplot as plt
-import numpy as np
 import pickle
-import radialNonsense
+
+from preprocessing import *
 
 
 def load_model(bin_dir):
@@ -48,51 +46,6 @@ def plot_images(imgs, title):
     plt.show()
 
 
-def flood_fill(img):
-    im_f = cv.bitwise_not(img).copy()
-    # Pad all edges of the image with zeros. Super important step
-    im_f = np.pad(im_f, ((10, 10), (10, 10)), 'constant')
-    h, w = im_f.shape[:2]
-    mask = np.zeros((h + 2, w + 2), np.uint8)
-    cv.floodFill(im_f, mask, (0, 0), 0)
-    return cv.bitwise_not(im_f)
-
-
-def to_bgr(im):
-    """
-    Converts a grayscale image back to BGR to allow for color
-    :param im: Grayscale image
-    :return: Same image but with 3 channels for BGR
-    """
-    w, h = im.shape
-    ret = np.empty((w, h, 3), dtype=np.uint8)
-    ret[:, :, 2] = ret[:, :, 1] = ret[:, :, 0] = im
-    return ret
-
-
-def deskew(img):
-    coords = np.column_stack(np.where(img < 255))
-    angle = cv.minAreaRect(coords)[-1]
-    if angle < -45:
-        angle = -(90 + angle)
-    else:
-        angle = -angle
-    (h, w) = img.shape[:2]
-    center = (w // 2, h // 2)
-    M = cv.getRotationMatrix2D(center, angle, 1.0)
-    return cv.warpAffine(img, M, (w, h), flags=cv.INTER_CUBIC, borderMode=cv.BORDER_REPLICATE)
-
-
-def padto(shape, i):
-    height, width = i.shape
-    dheight, dwidth = shape
-    xpad = dwidth - width
-    xtuple = (int(xpad / 2), xpad - int(xpad / 2))
-    ypad = dheight - height
-    ytuple = (int(ypad / 2), ypad - int(ypad / 2))
-    return np.pad(i, (ytuple, xtuple), 'constant', constant_values=(255))
-
-
 def process(img, minconf):
     blur = cv.medianBlur(cv.medianBlur(img, 3), 3)
     _, th2 = cv.threshold(blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
@@ -101,7 +54,7 @@ def process(img, minconf):
     th2 = cv.dilate(th2, np.ones((5, 5), dtype=np.uint8), iterations=1)
     th2 = deskew(th2)
     nb_components, _, stats, centroids = cv.connectedComponentsWithStats(cv.bitwise_not(th2), connectivity=8)
-    stats = radialNonsense.radialJoin(img, stats, centroids)
+    stats = radialJoin(img, stats, centroids)
     stats = sorted(stats, key=lambda x: (x[0], x[1]))
     bounds = to_bgr(th2)
     res = to_bgr(np.ones((th2.shape[0], th2.shape[1]), dtype=np.uint8) * 255)
@@ -122,7 +75,6 @@ def process(img, minconf):
             ci = ci.reshape(1, 28, 28, 1).astype('float32') / 255
             result = model.predict(ci)
             conf = str(round(max(result[0]) * 100, 2))
-            print(result)
             # TODO: over prioritize math symbols
             if float(conf) > float(minconf):
                 index = int(np.argmax(result, axis=1)[0])
