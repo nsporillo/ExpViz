@@ -50,19 +50,13 @@ mapping = pickle.load(open('bin/mapping.p', 'rb'))
 cv.namedWindow('Symbol Classification')
 cv.setMouseCallback('Symbol Classification', line_drawing)
 
-history = list()
-
+imgcount = 1
 while 1:
-    if len(history) > 0:
-        hist = np.hstack(history)
-        cv.imshow('Symbol Classification', np.hstack((img, hist)))
-    else:
-        cv.imshow('Symbol Classification', img)
-
+    cv.imshow('Symbol Classification', img)
     key = cv.waitKey(1) & 0xFF
     if key == ord('c'):
         # Convert to grayscale, downsample by a factor of 4 and normalize intensities before prediction
-        pred = cv.cvtColor(cv.resize(img, (28, 28)), cv.COLOR_BGR2GRAY).reshape(1, 28, 28, 1).astype('float32') / 255
+        pred = cv.cvtColor(cv.resize(img[:,:width], (28, 28)), cv.COLOR_BGR2GRAY).reshape(1, 28, 28, 1).astype('float32') / 255
 
         # Predict and print
         result = model.predict(pred)
@@ -70,15 +64,13 @@ while 1:
         if index < len(mapping):
             print("Pred= [" + mapping[index] + "] conf= " + str(round(max(result[0]) * 100, 2)))
             img = cv.putText(img, mapping[index], (90, 50), cv.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 255))
-            img = cv.copyMakeBorder(img, 1, 1, 1, 1, cv.BORDER_CONSTANT, value=(255, 0, 0))
-            img = cv.resize(img, (height, width))
-            history.append(img.copy())
-            if len(history) >= 6:
-                history.pop(0)
+            img[:1],img[-1:],img[:,:1],img[:,-1:] = [0,255,0],[0,255,0],[0,255,0],[0,255,0]
+            #img = cv.copyMakeBorder(img, 1, 1, 1, 1, cv.BORDER_ISOLATED, value=(255, 0, 0))
         else:
             print('No prediction for mapping[' + str(index) + ']')
         # Reset the image in the drawing window
-        img = np.zeros((height, width, 3), np.uint8)
+        img = np.hstack((np.zeros((height, width, 3), np.uint8),img[:,:min(6,imgcount)*width,:]))
+        imgcount += 1
     elif key == ord('e'):
         print('Exiting')
         break

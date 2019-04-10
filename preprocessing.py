@@ -77,7 +77,7 @@ def radialJoin(img, stats, centroids):
                                                        stats[nearests[x][y]][4]
             if nsarea < 100 or abs(nswidth - swidth) > 100:
                 continue
-            if sleft - 10 <= nsleft <= sleft + swidth + 10 or nsleft - 10 <= sleft <= nsleft + nswidth + 10:
+            if sleft <= nsleft <= sleft + swidth or nsleft <= sleft <= nsleft + nswidth:
                 bound = (
                 min(sleft, nsleft), min(stop, nstop), max(sleft + swidth, nsleft + nswidth) - min(sleft, nsleft),
                 max(stop + sheight, nstop + nsheight) - min(stop, nstop), sarea + nsarea)
