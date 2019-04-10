@@ -165,7 +165,7 @@ def build_net(num_classes, width=28, height=28):
                             padding='valid',
                             input_shape=input_shape,
                             activation='relu'))
-    model.add(Convolution2D(32,
+    model.add(Convolution2D(64,
                             (3, 3),
                             activation='relu'))
 
@@ -256,7 +256,7 @@ def train(model, training_data, mapping, num_classes, batch_size=128, epochs=10,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(usage='Program to train a CNN for character detection')
     parser.add_argument('-f', '--file', type=str, help='File to use for training', required=True)
-    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train on')
+    parser.add_argument('--epochs', type=int, default=20, help='Number of epochs to train on')
     args = parser.parse_args()
 
     bin_dir = os.path.dirname(os.path.realpath(__file__)) + '/bin'
@@ -267,7 +267,7 @@ if __name__ == '__main__':
     emnist_mapping = emnist_data[3]
     print('EMNIST data loaded ' + str(emnist_data[2]) + ' classes')
     hasy_data = load_hasy_data(len(emnist_mapping),
-                               ['\\pi', '\\{', '\\}', '\\forall', '\\doteq', '\\pm', '\\nabla'])
+                               ['+', '-', '\\$', '\\pi', '\\{', '\\}', '\\forall', '\\doteq', '\\pm', '\\nabla'])
     hasy_mapping = hasy_data[3]
     print('Hasy data loaded ' + str(hasy_data[2]) + ' classes')
 
