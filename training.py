@@ -4,15 +4,15 @@ import pickle
 import time
 
 import cv2 as cv
-
 import hasy_tools
 import keras
+import matplotlib.pyplot as plt
 import numpy as np
 from keras.layers import MaxPooling2D, Convolution2D, Dropout, Dense, Flatten
 from keras.models import Sequential, save_model
-import matplotlib.pyplot as plt
-from keras.utils.vis_utils import plot_model
+from keras.preprocessing.image import ImageDataGenerator
 from keras.utils import np_utils
+from keras.utils.vis_utils import plot_model
 from scipy.io import loadmat
 
 
@@ -52,12 +52,12 @@ def load_emnist_data(mat_file_path):
     return (train_imgs, train_lbls), (test_imgs, test_lbls), len(mapping), mapping
 
 
-def load_hasy_data(start = 0, classes=None):
+def load_hasy_data(start=0, classes=None):
     data = hasy_tools.load_data()
     print("Hasy Labels: " + str(data['labels']))
     indices = []
     realindices = {}
-    i = 1
+    i = 0
     if classes is not None:
         for clazz in classes:
             index = data['labels'].index(clazz)
@@ -65,7 +65,7 @@ def load_hasy_data(start = 0, classes=None):
             realindices[index] = int(start + i)
             i += 1
 
-    print("Chosen Hasy Class Indices: " + str(indices))
+    print("Chosen Hasy Class Indices: " + str(indices) + ', Mapping = [' + str(realindices.values) + ']')
 
     # Load training data
     training_labels = data['y_train'][:data['x_train'].shape[0]]
@@ -83,7 +83,7 @@ def load_hasy_data(start = 0, classes=None):
     pre_train_images = np.array(pre_train_images).reshape(len(pre_train_images), 32, 32, 1)
     training_images = np.zeros((max_, 28, 28, 1))
     for i in range(0, max_):
-        training_images[i] = np.expand_dims(cv.resize(np.invert(pre_train_images[i]), (28,28)), axis=2)
+        training_images[i] = np.expand_dims(cv.resize(np.invert(pre_train_images[i]), (28, 28)), axis=2)
     del pre_train_images
 
     training_labels = np.array(pre_train_labels)
@@ -104,7 +104,7 @@ def load_hasy_data(start = 0, classes=None):
     pre_test_images = np.array(pre_test_images).reshape(len(pre_test_images), 32, 32, 1)
     testing_images = np.zeros((max_, 28, 28, 1))
     for i in range(0, max_):
-        testing_images[i] = np.expand_dims(cv.resize(np.invert(pre_test_images[i]), (28,28)), axis=2)
+        testing_images[i] = np.expand_dims(cv.resize(np.invert(pre_test_images[i]), (28, 28)), axis=2)
     del pre_test_images
 
     testing_labels = np.array(pre_test_labels)
@@ -161,12 +161,12 @@ def build_net(num_classes, width=28, height=28):
 
     model = Sequential()
     model.add(Convolution2D(32,
-                            (5, 5),
+                            (3, 3),
                             padding='valid',
                             input_shape=input_shape,
                             activation='relu'))
-    model.add(Convolution2D(64,
-                            (5, 5),
+    model.add(Convolution2D(32,
+                            (3, 3),
                             activation='relu'))
 
     model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -186,32 +186,41 @@ def build_net(num_classes, width=28, height=28):
     return model
 
 
-def train(model, training_data, mapping, num_classes, batch_size=256, epochs=50, plot=True):
+def train(model, training_data, mapping, num_classes, batch_size=128, epochs=10, plot=True):
     x_train, y_train, x_test, y_test = training_data
 
-    labels = list(mapping.values())
-    labels.append('')
-    ind = np.arange(num_classes)
-    width = .1
-    plt.figure()
-    hist = np.histogram(y_train, bins=num_classes)[0]
-    plt.bar(ind + width, hist, align='center', tick_label=labels)
-    plt.gca().set(title='Character Frequency Histogram', ylabel='Occurrences')
-    plt.show()
+    if plot:
+        labels = list(mapping.values())
+        ind = np.arange(num_classes)
+        width = .1
+        plt.figure()
+        hist = np.histogram(y_train, bins=num_classes)[0]
+        plt.bar(ind + width, hist, align='center', tick_label=labels)
+        plt.gca().set(title='Character Frequency Histogram', ylabel='Occurrences')
+        plt.show()
 
     start = time.time()
     print(str(np.unique(y_train)))
     # convert class vectors to binary class matrices
     y_train = np_utils.to_categorical(y_train, num_classes)
     y_test = np_utils.to_categorical(y_test, num_classes)
-    history = model.fit(x_train, y_train,
-                        batch_size=batch_size,
-                        epochs=epochs,
-                        verbose=1,
-                        validation_data=(x_test, y_test))
+
+    datagen = keras.preprocessing.image.ImageDataGenerator(
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+        zoom_range=0.2,
+        fill_mode='nearest')
+
+    datagen.fit(x_train)
+
+    history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=batch_size),
+                                  steps_per_epoch=x_train.shape[0] // batch_size,
+                                  epochs=epochs,
+                                  verbose=1,
+                                  validation_data=(x_test, y_test))
 
     end = time.time()
-    print('Training took ' + str(end-start) + ' seconds')
+    print('Training took ' + str(end - start) + ' seconds')
 
     if plot:
         # Plot training & validation accuracy values
@@ -236,7 +245,6 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=50,
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test score:', score[0])
     print('Test accuracy:', score[1])
-
 
     # Save the model to file
     model_yaml = model.to_yaml()
@@ -271,7 +279,7 @@ if __name__ == '__main__':
         mapping[k + i] = hasy_mapping[i]
 
     print(mapping)
-    num_classes = len(mapping) + 1
+    num_classes = len(mapping)
     print('Total classes: ' + str(num_classes))
     pickle.dump(mapping, open('bin/mapping.p', 'wb'))
     model = build_net(num_classes)
