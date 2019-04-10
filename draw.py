@@ -31,11 +31,11 @@ def line_drawing(event, x, y, flags, param):
 
     elif event == cv.EVENT_MOUSEMOVE:
         if drawing:
-            cv.line(img, (pt1_x, pt1_y), (x, y), color=(255, 255, 255), thickness=2)
+            cv.line(img, (pt1_x, pt1_y), (x, y), color=(255, 255, 255), thickness=4)
             pt1_x, pt1_y = x, y
     elif event == cv.EVENT_LBUTTONUP:
         drawing = False
-        cv.line(img, (pt1_x, pt1_y), (x, y), color=(255, 255, 255), thickness=2)
+        cv.line(img, (pt1_x, pt1_y), (x, y), color=(255, 255, 255), thickness=4)
 
 """
 Test program for drawing in characters and observing the prediction and confidence
@@ -59,7 +59,7 @@ while 1:
         # Predict and print
         result = model.predict(pred)
         index = int(np.argmax(result, axis=1)[0])
-        if index <= len(mapping):
+        if index < len(mapping):
             print("Pred= [" + mapping[index] + "] conf= " + str(round(max(result[0]) * 100, 2)))
         else:
             print('No prediction for mapping[' + str(index) + ']')
