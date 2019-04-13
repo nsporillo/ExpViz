@@ -46,7 +46,7 @@ class Sum(Function):
     def evaluate(self, vals):
         sum = 0
         for component in self.components:
-            sum += component.evaluate(vals)
+            sum = np.add(sum,component.evaluate(vals))
         return sum
 
 
@@ -71,7 +71,7 @@ class Product(Function):
     def evaluate(self, vals):
         prod = self.components[0].evaluate(vals)
         for component in self.components[1:]:
-            prod *= component.evaluate(vals)
+            prod = np.multiply(component.evaluate(vals),prod)
         return prod
 
 

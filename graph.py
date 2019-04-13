@@ -19,22 +19,23 @@ class dummyEquations1():
         return (3*l['x']**2)
 
 def graph(equation, final=False):
-    freevars = equation.free()
+    freevars = equation.get_variables()
+    plt.clf()
+    plt.cla()
     if len(freevars) == 2:
         xs = list(np.arange(100))
-        ys = equation.evaluate({freevars[1]:np.arange(100)})
-        fig = plt.figure()
+        ys = equation.evaluate([np.arange(100)])
+        #fig = plt.figure()
         plt.xlabel(freevars[1])
         plt.ylabel(freevars[0])
         plt.plot(xs,ys)
         #plt.ylabel('some numbers')
-        plt.show()
-        if final:
-            plt.show(block=False)
+        #plt.show()
+        plt.draw()
+        plt.show(block=False)
     if len(freevars) == 3:
         xs, ys = np.meshgrid(np.linspace(0,100,30),np.linspace(0,100,30))
-        zs = equation.evaluate({freevars[1]:xs,freevars[2]:ys})
-        fig = plt.figure()
+        zs = equation.evaluate([xs,ys])
         plt.subplot()
         ax = plt.axes(projection='3d')
         ax.plot_surface(xs, ys, zs, rstride=1, cstride=1,
@@ -43,9 +44,9 @@ def graph(equation, final=False):
         ax.set_xlabel(freevars[1])
         ax.set_ylabel(freevars[2])
         ax.set_zlabel(freevars[0])
-        if final:
-            plt.show(block=False)
-    return fig
+        plt.draw()
+        plt.show(block=False)
+    return plt
 
 if __name__ == "__main__":
     p = graph(dummyEquations())
