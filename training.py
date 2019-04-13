@@ -219,22 +219,24 @@ def build_net(num_classes, width=28, height=28):
                             padding='valid',
                             input_shape=input_shape,
                             activation='relu'))
-    model.add(Convolution2D(32,
-                            (3, 3),
-                            activation='relu'))
+    model.add(Convolution2D(64, (3, 3), use_bias=False))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Activation("relu"))
 
     model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(rate=0.2))
+    model.add(Dropout(rate=0.1))
 
     model.add(Flatten())
-    model.add(Dense(512, activation='relu'))
+    model.add(Dense(512, use_bias=False))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Activation("relu"))
     model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
 
-    plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
+    plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True, rankdir='LR')
     return model
 
 
@@ -247,7 +249,7 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
         # Plot training data symbol histogram
         labels = list(mapping.values())
         ind = np.arange(num_classes)
-        width = .1
+        width = .15
         plt.figure()
         hist = np.histogram(y_train, bins=num_classes)[0]
         plt.bar(ind + width, hist, align='center', tick_label=labels)
@@ -310,7 +312,7 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(usage='Program to train a CNN for character detection')
     parser.add_argument('-f', '--file', type=str, help='File to use for training', required=True)
-    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train on')
+    parser.add_argument('--epochs', type=int, default=5, help='Number of epochs to train on')
     args = parser.parse_args()
 
     bin_dir = os.path.dirname(os.path.realpath(__file__)) + '/bin'
@@ -318,11 +320,12 @@ if __name__ == '__main__':
         os.makedirs(bin_dir)
 
     emnist_data = load_emnist_data(args.file, ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-                                               'a', 'b', 'c', 'd', 'e', 'f', 'i', 'o', 'n', 's', 'v', 'x', 'y', 'z'])
+                                               'A', 'U'
+                                               'a', 'b', 'c', 'd', 'e', 'i', 'o', 'm', 'n', 's', 'v', 'x', 'y', 'z'])
     emnist_mapping = emnist_data[3]
     print('EMNIST data loaded ' + str(emnist_data[2]) + ' classes')
     hasy_data = load_hasy_data(len(emnist_mapping),
-                               ['+', '-', '\\$', '\\pi', '\\{', '\\}', '\\forall', '\\doteq', '/', '\\neg', '\\ast',
+                               ['+', '-', '\\pi', '\\forall', '\\doteq', '/', '\\neg', '\\ast',
                                 '[', ']'])
     hasy_mapping = hasy_data[3]
     print('Hasy data loaded ' + str(hasy_data[2]) + ' classes')
