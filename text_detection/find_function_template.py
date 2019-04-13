@@ -14,6 +14,8 @@ def main():
 	args = vars(ap.parse_args())
 
 	cv2.namedWindow('Image', cv2.WINDOW_NORMAL)
+	cv2.namedWindow('debug', cv2.WINDOW_NORMAL)
+
 
 	template = cv2.imread(args["template"])
 
@@ -74,9 +76,35 @@ def get_equation(img, template_box):
 
 	sX, sY, eX, eY = template_box
 	cropped = img[sY:eY, sX:, :]
+	gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
 	cv2.imshow("Image", cropped)
 	cv2.waitKey(0)
+	ret, thresh = cv2.threshold(gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+	# You need to choose 4 or 8 for connectivity type
+	connectivity = 4  
+	# Perform the operation
+	output = cv2.connectedComponentsWithStats(thresh, connectivity, cv2.CV_32S)
+	imshow_components(output[1])
 
+
+
+def imshow_components(labels):
+	"""
+	Display components throughout hue range.
+	"""
+	# Map component labels to hue val
+	label_hue = np.uint8(179*labels/np.max(labels))
+	blank_ch = 255*np.ones_like(label_hue)
+	labeled_img = cv2.merge([label_hue, blank_ch, blank_ch])
+
+	# cvt to BGR for display
+	labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
+
+	# set bg label to black
+	labeled_img[label_hue==0] = 0
+
+	cv2.imshow('debug', labeled_img)
+	cv2.waitKey()
 
 
 if __name__ == '__main__':
