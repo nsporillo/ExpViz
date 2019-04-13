@@ -160,21 +160,20 @@ def build_net(num_classes, width=28, height=28):
     input_shape = (height, width, 1)
 
     model = Sequential()
-    model.add(Convolution2D(32,
-                            (3, 3),
+    model.add(Convolution2D(128,
+                            (5, 5),
                             padding='valid',
                             input_shape=input_shape,
                             activation='relu'))
-    model.add(Convolution2D(64,
+    model.add(Convolution2D(32,
                             (3, 3),
                             activation='relu'))
 
     model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(rate=0.25))
+    model.add(Dropout(rate=0.2))
 
     model.add(Flatten())
-    model.add(Dense(1024, activation='relu'))
-    model.add(Dropout(rate=0.5))
+    model.add(Dense(512, activation='relu'))
     model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
@@ -186,10 +185,13 @@ def build_net(num_classes, width=28, height=28):
     return model
 
 
-def train(model, training_data, mapping, num_classes, batch_size=128, epochs=10, plot=True):
+def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10, plot=True):
     x_train, y_train, x_test, y_test = training_data
 
+    start = time.time()
+
     if plot:
+        # Plot training data symbol histogram
         labels = list(mapping.values())
         ind = np.arange(num_classes)
         width = .1
@@ -197,18 +199,16 @@ def train(model, training_data, mapping, num_classes, batch_size=128, epochs=10,
         hist = np.histogram(y_train, bins=num_classes)[0]
         plt.bar(ind + width, hist, align='center', tick_label=labels)
         plt.gca().set(title='Character Frequency Histogram', ylabel='Occurrences')
-        plt.show()
 
-    start = time.time()
     print(str(np.unique(y_train)))
     # convert class vectors to binary class matrices
     y_train = np_utils.to_categorical(y_train, num_classes)
     y_test = np_utils.to_categorical(y_test, num_classes)
 
     datagen = keras.preprocessing.image.ImageDataGenerator(
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        zoom_range=0.2,
+        width_shift_range=0.1,
+        height_shift_range=0.1,
+        zoom_range=0.3,
         fill_mode='nearest')
 
     datagen.fit(x_train)
@@ -256,7 +256,7 @@ def train(model, training_data, mapping, num_classes, batch_size=128, epochs=10,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(usage='Program to train a CNN for character detection')
     parser.add_argument('-f', '--file', type=str, help='File to use for training', required=True)
-    parser.add_argument('--epochs', type=int, default=20, help='Number of epochs to train on')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train on')
     args = parser.parse_args()
 
     bin_dir = os.path.dirname(os.path.realpath(__file__)) + '/bin'
