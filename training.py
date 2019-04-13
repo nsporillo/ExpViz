@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import os
 import pickle
 import time
@@ -10,7 +11,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from keras.layers import MaxPooling2D, Convolution2D, Dropout, Dense, Flatten
 from keras.models import Sequential, save_model
-from keras.preprocessing.image import ImageDataGenerator
 from keras.utils import np_utils
 from keras.utils.vis_utils import plot_model
 from scipy.io import loadmat
@@ -21,11 +21,15 @@ def load_emnist_data(mat_file_path, classes=None):
 
     # Load character mapping
     mapping = {kv[0]: chr(kv[1:][0]) for kv in mat['dataset'][0][0][2]}
-    maplen = len(mapping)
+    # Only consider the mapping for the classes we specify
     mapping = {key: val for key, val in mapping.items() if val in classes}
     indices = {}
     actualmapping = {}
 
+    """
+    Enforce monotonically increasing label indices 
+    Specify collections for remapping label values
+    """
     amindex = 0
     for key in mapping.keys():
         value = mapping[key]
@@ -41,10 +45,6 @@ def load_emnist_data(mat_file_path, classes=None):
     max_ = len(mat['dataset'][0][0][0][0][0][0])
     train_imgs = mat['dataset'][0][0][0][0][0][0][:max_].reshape(max_, 28, 28, 1)
     train_lbls = mat['dataset'][0][0][0][0][0][1][:max_]
-
-    hist = np.histogram(train_lbls, bins=maplen)[0]
-    print('Train Labels Histogram:')
-    print(hist)
 
     # Process training images and labels
     _len = len(train_imgs)
@@ -69,7 +69,7 @@ def load_emnist_data(mat_file_path, classes=None):
     del train_lbls
 
     hist = np.histogram(training_labels, bins=len(keys))[0]
-    print('Revisted Train Labels Histogram:')
+    print('Revised Train Labels Histogram:')
     print(hist)
 
     # Load testing data
@@ -214,29 +214,21 @@ def build_net(num_classes, width=28, height=28):
     input_shape = (height, width, 1)
 
     model = Sequential()
-    model.add(Convolution2D(128,
-                            (5, 5),
-                            padding='valid',
-                            input_shape=input_shape,
-                            activation='relu'))
-    model.add(Convolution2D(64, (3, 3), use_bias=False))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Activation("relu"))
+    model.add(Convolution2D(256, (3, 3), padding='valid', input_shape=input_shape, activation='relu'))
+    model.add(Convolution2D(64, (3, 3), activation='relu'))
 
     model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(rate=0.1))
+    model.add(Dropout(rate=0.2))
 
     model.add(Flatten())
-    model.add(Dense(512, use_bias=False))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Activation("relu"))
+    model.add(Dense(512, activation='relu'))
     model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
 
-    plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True, rankdir='LR')
+    plot_model(model, to_file='plots/model_plot.png', show_shapes=True, show_layer_names=True, rankdir='LR')
     return model
 
 
@@ -254,7 +246,7 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
         hist = np.histogram(y_train, bins=num_classes)[0]
         plt.bar(ind + width, hist, align='center', tick_label=labels)
         plt.gca().set(title='Character Frequency Histogram', ylabel='Occurrences')
-        print(hist)
+        plt.savefig('plots/sym_hist.png')
 
     print(str(np.unique(y_train)))
     # convert class vectors to binary class matrices
@@ -275,8 +267,7 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
                                   verbose=1,
                                   validation_data=(x_test, y_test))
 
-    end = time.time()
-    print('Training took ' + str(end - start) + ' seconds')
+    print('Training took ' + str(datetime.timedelta(seconds=(time.time() - start))))
 
     if plot:
         # Plot training & validation accuracy values
@@ -287,6 +278,7 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
         plt.ylabel('Accuracy')
         plt.xlabel('Epoch')
         plt.legend(['Train', 'Test'], loc='upper left')
+        plt.savefig('plots/latest_accuracy.png')
 
         # Plot training & validation loss values
         plt.figure()
@@ -296,7 +288,7 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
         plt.ylabel('Loss')
         plt.xlabel('Epoch')
         plt.legend(['Train', 'Test'], loc='upper left')
-        plt.show()
+        plt.savefig('plots/latest_loss.png')
 
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test score:', score[0])
@@ -310,8 +302,8 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(usage='Program to train a CNN for character detection')
-    parser.add_argument('-f', '--file', type=str, help='File to use for training', required=True)
+    parser = argparse.ArgumentParser(usage='Program to train a CNN for symbol detection')
+    parser.add_argument('-f', '--file', type=str, help='EMNIST file to use for training', required=True)
     parser.add_argument('--epochs', type=int, default=5, help='Number of epochs to train on')
     args = parser.parse_args()
 
@@ -321,7 +313,8 @@ if __name__ == '__main__':
 
     emnist_data = load_emnist_data(args.file, ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
                                                'A', 'U'
-                                               'a', 'b', 'c', 'd', 'e', 'i', 'o', 'm', 'n', 's', 'v', 'x', 'y', 'z'])
+                                                    'a', 'b', 'c', 'd', 'e', 'i', 'o', 'm', 'n', 's', 'v', 'x', 'y',
+                                               'z'])
     emnist_mapping = emnist_data[3]
     print('EMNIST data loaded ' + str(emnist_data[2]) + ' classes')
     hasy_data = load_hasy_data(len(emnist_mapping),
