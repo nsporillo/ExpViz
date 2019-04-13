@@ -83,6 +83,9 @@ class Sine(Function):
         super().__init__()
         self.components = [f1]
 
+    def __repr__(self):
+        return "(Sin(" + repr(self.components[0]) + "))"
+
     def evaluate(self, vals):
         return math.sin(self.components[0].evaluate(vals))
 
@@ -91,6 +94,9 @@ class Cosine(Function):
     def __init__(self, f1):
         super().__init__()
         self.components = [f1]
+
+    def __repr__(self):
+        return "(Cos(" + repr(self.components[0]) + "))"
 
     def evaluate(self, vals):
         return math.cos(self.components[0].evaluate(vals))
@@ -101,6 +107,9 @@ class Exponent(Function):
         super().__init__()
         self.components = [f1, f2]
 
+    def __repr__(self):
+        return "(" + repr(self.components[0]) + " ^ " + repr(self.components[1]) + ")"
+
     def evaluate(self, vals):
         return math.pow(self.components[0].evaluate(vals), self.components[1].evaluate(vals))
 
@@ -109,6 +118,9 @@ class Logarithm(Function):
     def __init__(self, f1):
         super().__init__()
         self.components = [f1]
+
+    def __repr__(self):
+        return "(ln(" + repr(self.components[0]) + "))"
 
     def evaluate(self, vals):
         return math.log(self.components[0].evaluate(vals))

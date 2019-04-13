@@ -115,7 +115,7 @@ def cyk(string, grammar, debug=False):
                 elif len(rule.terms) == 2:
                     for k in range(i, j):
                         if parse_tree[i][k][grammar.nterms[rule.terms[0]]] and parse_tree[k + 1][j][grammar.nterms[rule.terms[1]]]:
-                            parse_tree[i][j][grammar.nterms[rule.left]] = [k, rule]
+                            parse_tree[i][j][grammar.nterms[rule.left]] = [[k], rule]
                 else:
                     for k in range(i, j-1):
                         for m in range(k, j):
@@ -138,7 +138,7 @@ def build_function(parse_tree, grammar, input, i, j, nterm):
         if rule.terms[0] == "VAR":
             return eq.Variable(input[i:j+1])
         elif rule.terms[0] == "CONST":
-            return eq.Constant(float(input[i:j]))
+            return eq.Constant(float(input[i:j+1]))
         else:
             return build_function(parse_tree, grammar, input, i, j, rule.terms[0])
 
@@ -147,11 +147,11 @@ def build_function(parse_tree, grammar, input, i, j, nterm):
     elif len(rule.terms) == 2:
         [k] = parse_tree[i][j][r][0]
         if rule.terms[0] == "SIN":
-            return eq.Sine(build_function(parse_tree, grammar, input, k+1, rule.terms[1]))
+            return eq.Sine(build_function(parse_tree, grammar, input, k+1, j, rule.terms[1]))
         elif rule.terms[0] == "COS":
-            return eq.Cosine(build_function(parse_tree, grammar, input, k + 1, rule.terms[1]))
+            return eq.Cosine(build_function(parse_tree, grammar, input, k+1, j, rule.terms[1]))
         elif rule.terms[0] == "LOG":
-            return eq.Logarithm(build_function(parse_tree, grammar, input, k + 1, rule.terms[1]))
+            return eq.Logarithm(build_function(parse_tree, grammar, input, k+1, j, rule.terms[1]))
     # Ternary Expansion of Term
     # Likely binary operation, check OP
     else:
