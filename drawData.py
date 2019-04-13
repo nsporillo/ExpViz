@@ -17,11 +17,11 @@ def line_drawing(event, x, y, flags, param):
 
     elif event == cv.EVENT_MOUSEMOVE:
         if drawing:
-            cv.line(img, (pt1_x, pt1_y), (x, y), color=(0, 0, 0), thickness=7)
+            cv.line(img, (pt1_x, pt1_y), (x, y), color=(0, 0, 0), thickness=10)
             pt1_x, pt1_y = x, y
     elif event == cv.EVENT_LBUTTONUP:
         drawing = False
-        cv.line(img, (pt1_x, pt1_y), (x, y), color=(0, 0, 0), thickness=7)
+        cv.line(img, (pt1_x, pt1_y), (x, y), color=(0, 0, 0), thickness=10)
 
 
 cv.namedWindow('Test Classification')
