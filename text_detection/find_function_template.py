@@ -11,27 +11,23 @@ def main():
 	ap = argparse.ArgumentParser()
 	ap.add_argument("-t", "--template", required=True, help="Path to template image")
 	ap.add_argument("-i", "--images", required=True, help="Path to images where template will be matched")
-	ap.add_argument("-v", "--visualize", help="Flag indicating whether or not to visualize each iteration", action="store_true")
 	args = vars(ap.parse_args())
 
-	cv2.namedWindow('Visualize', cv2.WINDOW_NORMAL)
 	cv2.namedWindow('Image', cv2.WINDOW_NORMAL)
-	cv2.namedWindow('Template', cv2.WINDOW_NORMAL)
 
 	template = cv2.imread(args["template"])
-	template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-	template = cv2.Canny(template, 50, 200)
-
-	cv2.imshow("Template", template)
 
 		# loop over the images to find the template in
 	for imagePath in glob.glob(args["images"] + "/*.jpg"):
 		image = cv2.imread(imagePath)
-		iterative_template_match(template, image)
+		template_box = iterative_template_match(template, image)
+		get_equation(image, template_box)
 
 
 def iterative_template_match(template, image):
 
+	template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+	template = cv2.Canny(template, 50, 200)
 	(tH, tW) = template.shape[:2]
 
 	# convert the image to grayscale, and initialize the
@@ -67,15 +63,16 @@ def iterative_template_match(template, image):
 	(_, maxLoc, r) = found
 	(startX, startY) = (int(maxLoc[0] * r), int(maxLoc[1] * r))
 	(endX, endY) = (int((maxLoc[0] + tW) * r), int((maxLoc[1] + tH) * r))
- 
-	# draw a bounding box around the detected result and display the image
-	cv2.rectangle(image, (startX, startY), (endX, endY), (0, 0, 255), 2)
-	cv2.imshow("Image", image)
-	cv2.waitKey(0)
+
+	return (startX, startY, endX, endY)
 
 
 def get_equation(img, template_box):
-	pass
+
+	sX, sY, eX, eY = template_box
+	cropped = img[sY:eY, sX:, :]
+	cv2.imshow("Image", cropped)
+	cv2.waitKey(0)
 
 
 if __name__ == '__main__':
