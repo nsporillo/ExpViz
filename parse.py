@@ -1,6 +1,7 @@
 import sys
 import re
 import equation as eq
+import numpy as np
 
 class Unit:
     def __init__(self, left, term):
@@ -178,7 +179,12 @@ def parse():
     print(grammar)
     line = input("")
     while line != "quit":
-        print(cyk(line, grammar, True))
+        func = cyk(line, grammar)
+        print(func)
+        func.get_variables()
+        print(func.variables)
+        func.update_variable_indxs()
+        print(func.evaluate([np.array([10, 11], dtype=np.float64), np.array([30, 32], dtype=np.float64)]))
         line = input("")
 
 
