@@ -88,11 +88,25 @@ def get_equation(img, template_box):
 	connectivity = 4  
 	# Perform the operation
 	output = cv2.connectedComponentsWithStats(filled, connectivity, cv2.CV_32S)
-	imshow_components(output[1])
+	right_bounds = get_equation_end(output[2])
+	imshow_components(output[1], right_bounds)
+
+
+def get_equation_end(stats):
+
+	# Get right bounds of all components and max gap
+	right_bounds = []
+	max_gap = 0
+	for stat in stats:
+		right_bounds.append(stat[cv2.CC_STAT_LEFT] + stat[cv2.CC_STAT_WIDTH])
+
+	right_bounds.sort()
+	print(right_bounds)
+	return(right_bounds)
 
 
 
-def imshow_components(labels):
+def imshow_components(labels, cuts):
 	"""
 	Display components throughout hue range.
 	"""
@@ -106,6 +120,9 @@ def imshow_components(labels):
 
 	# set bg label to black
 	labeled_img[label_hue==0] = 0
+
+	for cut in cuts:
+		labeled_img[:, cut-1, :] = 255
 
 	cv2.imshow('debug', labeled_img)
 	cv2.waitKey()
