@@ -75,11 +75,11 @@ def iterative_template_match(template, image):
 def get_equation(img, template_box):
 
 	sX, sY, eX, eY = template_box
-	cropped = img[sY:eY, sX:, :]
+	cropped = img[sY:eY, eX:, :]
 	gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+	edges = cv2.Canny(gray, 50, 200)
 	cv2.imshow("Image", cropped)
-	cv2.waitKey(0)
-	ret, thresh = cv2.threshold(gray,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+	ret, thresh = cv2.threshold(edges,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 	# You need to choose 4 or 8 for connectivity type
 	connectivity = 4  
 	# Perform the operation
