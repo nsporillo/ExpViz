@@ -106,6 +106,10 @@ class Exponent(Function):
 
 
 class Logarithm(Function):
+    def __init__(self, f1):
+        super().__init__()
+        self.components = [f1]
+
     def evaluate(self, vals):
         return math.log(self.components[0].evaluate(vals))
 

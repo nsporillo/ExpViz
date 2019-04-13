@@ -145,7 +145,13 @@ def build_function(parse_tree, grammar, input, i, j, nterm):
     # Binary Expansion of Term
     # Either unary operation or constant
     elif len(rule.terms) == 2:
-        print("ehh")
+        [k] = parse_tree[i][j][r][0]
+        if rule.terms[0] == "SIN":
+            return eq.Sine(build_function(parse_tree, grammar, input, k+1, rule.terms[1]))
+        elif rule.terms[0] == "COS":
+            return eq.Cosine(build_function(parse_tree, grammar, input, k + 1, rule.terms[1]))
+        elif rule.terms[0] == "LOG":
+            return eq.Logarithm(build_function(parse_tree, grammar, input, k + 1, rule.terms[1]))
     # Ternary Expansion of Term
     # Likely binary operation, check OP
     else:
@@ -158,6 +164,13 @@ def build_function(parse_tree, grammar, input, i, j, nterm):
             return eq.Product(build_function(parse_tree, grammar, input, i, k, rule.terms[0]), build_function(parse_tree, grammar, input, m+1, j, rule.terms[2]))
         elif rule.terms[1] == "DIV":
             return eq.Quotient(build_function(parse_tree, grammar, input, i, k, rule.terms[0]), build_function(parse_tree, grammar, input, m+1, j, rule.terms[2]))
+        elif rule.terms[1] == "MOD":
+            return eq.Modulus(build_function(parse_tree, grammar, input, i, k, rule.terms[0]), build_function(parse_tree, grammar, input, m+1, j, rule.terms[2]))
+        elif rule.terms[1] == "POW":
+            return eq.Exponent(build_function(parse_tree, grammar, input, i, k, rule.terms[0]), build_function(parse_tree, grammar, input, m+1, j, rule.terms[2]))
+        # ( EXPR ) / [ EXPR ] / { EXPR }
+        elif rule.terms[1] == "EXPR":
+            return build_function(parse_tree, grammar, input, k+1, m, rule.terms[1])
 
 
 def parse():
