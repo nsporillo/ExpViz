@@ -1,6 +1,6 @@
 import sys
 import re
-
+import equation as eq
 
 class Unit:
     def __init__(self, left, term):
@@ -38,11 +38,8 @@ class Rule:
 
 class Grammar:
     def __init__(self):
-        self.units = []
-        self.productions = []
-        self.rules = set()
-        self.terms2idx = dict()
-        self.idx2terms = dict()
+        self.rules = []
+        self.terms = []
         self.nterms = dict()
         self.start = 0
 
@@ -50,80 +47,31 @@ class Grammar:
         return len(self.nterms)
 
     def __repr__(self):
-        res = "["
-        for unit in self.units:
-            res += str(unit) + ", "
-        for production in self.productions:
-            res += str(production) + ", "
+        res = "TERMINALS:\n"
+        for term in self.terms:
+            res += repr(term) + "\n"
+        res += "\nNONTERMINALS:\n"
         for rule in self.rules:
-            res += str(rule) + ", "
-        res += "]"
+            res += repr(rule) + "\n"
         return res
 
     def add_unit(self, left, term):
-        self.units.append(Unit(left, term))
-
-    def add_production(self, left, A, B):
-        self.productions.append(Production(left, A, B))
-
-    def find_index(self, term):
-        if term in self.terms2idx:
-            return self.terms2idx[term]
-        else:
-            self.terms2idx[term] = len(self.terms2idx)
-            self.idx2terms[self.terms2idx[term]] = term
-            return self.terms2idx[term]
+        self.terms.append(Unit(left, term))
 
     def add_rule(self, left, terms):
-        left = self.find_index(left)
-        for i in range(0, len(terms)):
-            terms[i] = self.find_index(terms[i])
-        if left not in self.nterms:
-            self.nterms[left] = self.idx2terms[left]
         self.rules.append(Rule(left, terms))
         return left
-
-
-def expand_rule(grammar, rule):
-    if len(rule.terms) == 1 and rule.terms[0] not in grammar.nterms:
-        grammar.removed_rules.add(rule)
-        for rule2 in grammar.rule[rule.terms[0]]:
-            new = Rule(rule.left, rule2.terms)
-            if new not in grammar.removed_rules:
-                grammar.add_rule(rule.left, rule2.terms)
-
-
-
-def cvt2cnf(grammar):
-    # START
-    grammar.start = grammar.add_rule("__START__", grammar.idx2terms[grammar.start])
-
-    # TERM
-    for rule in grammar.rules:
-        for i in len(rule.terms):
-            if rule.terms[i] not in grammar.nterms:
-                rule.terms[i] = grammar.add_rule("$" + str(rule.terms[i]), rule.terms[i])
-
-    # BIN
-    for rule in grammar.rules:
-        while len(rule.terms) > 2:
-            A = rule.terms.pop(0)
-            B = rule.terms.pop(0)
-            rule.terms.insert(0, grammar.add_rule("$" + grammar.idx2terms[A] + grammar.idx2terms[B], [grammar.idx2terms[A], grammar.idx2terms[B]]))
-
-    # DEL
-    # NOTE, we won't have any epsilon rules, so we skip this here
-
-    # UNIT
-    for rule in grammar.rules:
-        expand_rule(grammar, rule)
-
-    return grammar
 
 
 def init_grammar(file):
     grammar = Grammar()
     with open(file) as f:
+        line = f.readline()
+        terms = line.strip().split()
+        for term in terms:
+            grammar.nterms[term] = len(grammar.nterms)
+        line = f.readline()
+        grammar.start = line.strip()
         for line in f:
             terms = line.strip().split()
             i = 2
@@ -133,7 +81,10 @@ def init_grammar(file):
                 while j < len(terms) and terms[j] != "|":
                     rhs.append(terms[j])
                     j += 1
-                grammar.add_rule(terms[0], rhs)
+                if len(rhs) == 1 and rhs[0] not in grammar.nterms:
+                    grammar.add_unit(terms[0], rhs[0])
+                else:
+                    grammar.add_rule(terms[0], rhs)
                 i = j + 1
     return grammar
 
@@ -145,30 +96,68 @@ def pretty_print(parse_tree):
         print("")
 
 
-def cyk(input, grammar, debug=False):
+def cyk(string, grammar, debug=False):
     r = len(grammar)
-    n = len(input)
+    n = len(string)
     parse_tree = [[[None for k in range(0, r)] for j in range(0, n)] for i in range(0, n)]
     for i in range(0, n):
-        for unit in grammar.units:
+        for unit in grammar.terms:
             # Terminals can now be matched by REGEX
-            if re.match(unit.term, input[i]):
-                    parse_tree[i][i][unit.left] = [-1, unit]
-    for l in range(1, n):
+            if re.match(unit.term, string[i]):
+                parse_tree[i][i][grammar.nterms[unit.left]] = [[], unit]
+    for l in range(0, n):
         for i in range(0, n-l):
             j = i + l
-            for k in range(i, j):
-                for production in grammar.productions:
-                    if parse_tree[i][k][production.A] and parse_tree[k+1][j][production.B]:
-                        if not parse_tree[i][j][production.left] or parse_tree[i][j][production.left][0] > k:
-                            parse_tree[i][j][production.left] = [k, production]
+            for rule in grammar.rules:
+                if len(rule.terms) == 1:
+                    if parse_tree[i][j][grammar.nterms[rule.terms[0]]]:
+                        parse_tree[i][j][grammar.nterms[rule.left]] = [[], rule]
+                elif len(rule.terms) == 2:
+                    for k in range(i, j):
+                        if parse_tree[i][k][grammar.nterms[rule.terms[0]]] and parse_tree[k + 1][j][grammar.nterms[rule.terms[1]]]:
+                            parse_tree[i][j][grammar.nterms[rule.left]] = [k, rule]
+                else:
+                    for k in range(i, j-1):
+                        for m in range(k, j):
+                            if parse_tree[i][k][grammar.nterms[rule.terms[0]]] and parse_tree[k+1][m][grammar.nterms[rule.terms[1]]] and parse_tree[m+1][j][grammar.nterms[rule.terms[2]]]:
+                                parse_tree[i][j][grammar.nterms[rule.left]] = [[k, m], rule]
     if debug:
         pretty_print(parse_tree)
-    if parse_tree[0][n-1][0]:
-        print("Member: " + str(parse_tree[0][n-1][0]))
+    if parse_tree[0][n-1][grammar.nterms[grammar.start]]:
+        return build_function(parse_tree, grammar, string, 0, n-1, grammar.start)
+    return None
+
+
+def build_function(parse_tree, grammar, input, i, j, nterm):
+    r = grammar.nterms[nterm]
+    # Find the rule chosen in the parse tree computation
+    rule = parse_tree[i][j][r][1]
+
+    # Renaming Operation or Terminal Translation
+    if len(rule.terms) == 1:
+        if rule.terms[0] == "VAR":
+            return eq.Variable(input[i:j+1])
+        elif rule.terms[0] == "CONST":
+            return eq.Constant(float(input[i:j]))
+        else:
+            return build_function(parse_tree, grammar, input, i, j, rule.terms[0])
+
+    # Binary Expansion of Term
+    # Either unary operation or constant
+    elif len(rule.terms) == 2:
+        print("ehh")
+    # Ternary Expansion of Term
+    # Likely binary operation, check OP
     else:
-        print("Not a member")
-    return parse_tree[0][n-1][0]
+        [k, m] = parse_tree[i][j][r][0]
+        if rule.terms[1] == "ADD":
+            return eq.Sum(build_function(parse_tree, grammar, input, i, k, rule.terms[0]), build_function(parse_tree, grammar, input, m+1, j, rule.terms[2]))
+        elif rule.terms[1] == "SUB":
+            return eq.Difference(build_function(parse_tree, grammar, input, i, k, rule.terms[0]), build_function(parse_tree, grammar, input, m+1, j, rule.terms[2]))
+        elif rule.terms[1] == "MUL":
+            return eq.Product(build_function(parse_tree, grammar, input, i, k, rule.terms[0]), build_function(parse_tree, grammar, input, m+1, j, rule.terms[2]))
+        elif rule.terms[1] == "DIV":
+            return eq.Quotient(build_function(parse_tree, grammar, input, i, k, rule.terms[0]), build_function(parse_tree, grammar, input, m+1, j, rule.terms[2]))
 
 
 def parse():
@@ -178,6 +167,7 @@ def parse():
     while line != "quit":
         print(cyk(line, grammar, True))
         line = input("")
+
 
 if __name__=='__main__':
     parse()
