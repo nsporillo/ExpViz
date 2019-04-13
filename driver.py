@@ -4,14 +4,16 @@ import graph
 import argparse
 import cv2
 import sys
-
+import matplotlib.pyplot as plt
 
 def main():
     formerequation = ''
+    imgs = cv2.imread('data/test715.jpg')
     parse.primer()
     classify.primer()
+    cv2.namedWindow('Exit Window',cv2.WINDOW_NORMAL)
     while 1:
-        #cv2.imshow('Symbol Classification', img)
+        cv2.imshow('Exit Window', imgs)
         key = cv2.waitKey(1) & 0xFF
         if key == ord('e'):
             print('Exiting')
