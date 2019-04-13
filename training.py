@@ -16,21 +16,61 @@ from keras.utils.vis_utils import plot_model
 from scipy.io import loadmat
 
 
-def load_emnist_data(mat_file_path):
+def load_emnist_data(mat_file_path, classes=None):
     mat = loadmat(mat_file_path)
 
     # Load character mapping
     mapping = {kv[0]: chr(kv[1:][0]) for kv in mat['dataset'][0][0][2]}
+    maplen = len(mapping)
+    mapping = {key: val for key, val in mapping.items() if val in classes}
+    indices = {}
+    actualmapping = {}
+
+    amindex = 0
+    for key in mapping.keys():
+        value = mapping[key]
+        actualmapping[amindex] = str(value)
+        indices[key] = amindex
+        amindex += 1
+
+    print('Mapping', mapping)
+    print('Actual', actualmapping)
+    print('Indices', indices)
 
     # Load training data
     max_ = len(mat['dataset'][0][0][0][0][0][0])
     train_imgs = mat['dataset'][0][0][0][0][0][0][:max_].reshape(max_, 28, 28, 1)
     train_lbls = mat['dataset'][0][0][0][0][0][1][:max_]
 
-    # Reshape training data
+    hist = np.histogram(train_lbls, bins=maplen)[0]
+    print('Train Labels Histogram:')
+    print(hist)
+
+    # Process training images and labels
     _len = len(train_imgs)
+    training_images = np.zeros((max_, 28, 28, 1))
+    training_labels = np.zeros((max_, 1))
+
+    fdex = 0
+    keys = mapping.keys()
+
+    print('Loading EMNIST Training Data')
     for trimg in range(_len):
-        train_imgs[trimg] = np.rot90(np.fliplr(train_imgs[trimg]))
+        trind = int(train_lbls[trimg])
+        if classes is not None and trind in keys:
+            training_images[fdex] = np.rot90(np.fliplr(train_imgs[trimg]))
+            training_labels[fdex] = indices[trind]
+            fdex += 1
+
+    training_images = training_images[:fdex]
+    training_labels = training_labels[:fdex]
+
+    del train_imgs
+    del train_lbls
+
+    hist = np.histogram(training_labels, bins=len(keys))[0]
+    print('Revisted Train Labels Histogram:')
+    print(hist)
 
     # Load testing data
     max_ = int(max_ / 6)
@@ -39,17 +79,31 @@ def load_emnist_data(mat_file_path):
 
     # Reshape testing data
     _len = len(test_imgs)
-    for teimg in range(_len):
-        test_imgs[teimg] = np.rot90(np.fliplr(test_imgs[teimg]))
+    testing_images = np.zeros((max_, 28, 28, 1))
+    testing_labels = np.zeros((max_, 1))
+    fdex = 0
 
-    train_imgs = train_imgs.astype('float32')
-    test_imgs = test_imgs.astype('float32')
+    print('Loading EMNIST Testing Data')
+    for teimg in range(_len):
+        teind = int(test_lbls[teimg])
+        if classes is not None and teind in keys:
+            testing_images[fdex] = np.rot90(np.fliplr(test_imgs[teimg]))
+            testing_labels[fdex] = indices[teind]
+            fdex += 1
+
+    testing_images = testing_images[:fdex]
+    testing_labels = testing_labels[:fdex]
+    del test_imgs
+    del test_lbls
+
+    training_images = training_images.astype('float32')
+    testing_images = testing_images.astype('float32')
 
     # Normalize to prevent issues with model
-    train_imgs /= 255
-    test_imgs /= 255
+    training_images /= 255
+    testing_images /= 255
 
-    return (train_imgs, train_lbls), (test_imgs, test_lbls), len(mapping), mapping
+    return (training_images, training_labels), (testing_images, testing_labels), len(actualmapping), actualmapping
 
 
 def load_hasy_data(start=0, classes=None):
@@ -180,7 +234,6 @@ def build_net(num_classes, width=28, height=28):
                   optimizer=keras.optimizers.Adadelta(),
                   metrics=['accuracy'])
 
-    print(model.summary())
     plot_model(model, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
     return model
 
@@ -199,6 +252,7 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
         hist = np.histogram(y_train, bins=num_classes)[0]
         plt.bar(ind + width, hist, align='center', tick_label=labels)
         plt.gca().set(title='Character Frequency Histogram', ylabel='Occurrences')
+        print(hist)
 
     print(str(np.unique(y_train)))
     # convert class vectors to binary class matrices
@@ -208,7 +262,7 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
     datagen = keras.preprocessing.image.ImageDataGenerator(
         width_shift_range=0.1,
         height_shift_range=0.1,
-        zoom_range=0.3,
+        zoom_range=0.1,
         fill_mode='nearest')
 
     datagen.fit(x_train)
@@ -263,11 +317,13 @@ if __name__ == '__main__':
     if not os.path.exists(bin_dir):
         os.makedirs(bin_dir)
 
-    emnist_data = load_emnist_data(args.file)
+    emnist_data = load_emnist_data(args.file, ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                                               'a', 'b', 'c', 'd', 'e', 'f', 'i', 'o', 'n', 's', 'v', 'x', 'y', 'z'])
     emnist_mapping = emnist_data[3]
     print('EMNIST data loaded ' + str(emnist_data[2]) + ' classes')
     hasy_data = load_hasy_data(len(emnist_mapping),
-                               ['+', '-', '\\$', '\\pi', '\\{', '\\}', '\\forall', '\\doteq', '\\pm', '\\nabla'])
+                               ['+', '-', '\\$', '\\pi', '\\{', '\\}', '\\forall', '\\doteq', '/', '\\neg', '\\ast',
+                                '[', ']'])
     hasy_mapping = hasy_data[3]
     print('Hasy data loaded ' + str(hasy_data[2]) + ' classes')
 
