@@ -1,30 +1,54 @@
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 import numpy as np
+import cv2
 
 class dummyEquations():
     def free(self):
-        return 2
+        return ['z','x','y']
 
     def evaluate(self,l):
-        return (3*l[0]**2 - 3*l[1] + 4)*np.sin(l[1])
+        return (3*l['x']**2*l['y']+3*l['x']*l['y']**2)
+        #return ((3*((l['x']-50)*100)**2 - 3*((l['y']-50)*100) + 4)*np.sin((l['y']-50)*100))
 
-def graph(equation):
+class dummyEquations1():
+    def free(self):
+        return ['happy days','x']
+
+    def evaluate(self,l):
+        return (3*l['x']**2)
+
+def graph(equation, final=False):
     freevars = equation.free()
-    if freevars == 1:
+    if len(freevars) == 2:
         xs = list(np.arange(100))
-        ys = sorted(list(map(equation.evaluate,(np.arange(100).reshape((100,1)).tolist()))))
+        ys = equation.evaluate({freevars[1]:np.arange(100)})
+        fig = plt.figure()
+        plt.xlabel(freevars[1])
+        plt.ylabel(freevars[0])
         plt.plot(xs,ys)
-        plt.ylabel('some numbers')
+        #plt.ylabel('some numbers')
         plt.show()
-    if freevars == 2:
-        xs, ys = np.meshgrid(np.arange(100),np.arange(100))
-        zs = equation.evaluate([xs,ys])
+        if final:
+            plt.show(block=False)
+    if len(freevars) == 3:
+        xs, ys = np.meshgrid(np.linspace(0,100,30),np.linspace(0,100,30))
+        zs = equation.evaluate({freevars[1]:xs,freevars[2]:ys})
+        fig = plt.figure()
+        plt.subplot()
         ax = plt.axes(projection='3d')
-        ax.contour3D(xs, ys, zs, 50, cmap='binary')
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.set_zlabel('z')
-        plt.show()
+        ax.plot_surface(xs, ys, zs, rstride=1, cstride=1,
+                        cmap='viridis', edgecolor='none')
+        ax.set_title('surface')
+        ax.set_xlabel(freevars[1])
+        ax.set_ylabel(freevars[2])
+        ax.set_zlabel(freevars[0])
+        if final:
+            plt.show(block=False)
+    return fig
 
-graph(dummyEquations())
+if __name__ == "__main__":
+    p = graph(dummyEquations())
+    p2 = graph(dummyEquations1(),True)
+    input("Do Stuff")
+    plt.close()
