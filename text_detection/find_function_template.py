@@ -26,6 +26,9 @@ def main():
 
 def iterative_template_match(template, image):
 
+	template = cv2.pyrDown(template)
+	template = cv2.pyrDown(template)
+	template = cv2.pyrDown(template)
 	template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
 	template = cv2.Canny(template, 50, 200)
 	(tH, tW) = template.shape[:2]
@@ -73,6 +76,7 @@ def get_equation(img, template_box):
 	cropped = img[sY:eY, sX:, :]
 	cv2.imshow("Image", cropped)
 	cv2.waitKey(0)
+
 
 
 if __name__ == '__main__':
