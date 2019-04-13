@@ -4,7 +4,6 @@ import graph
 import argparse
 import cv2
 import sys
-import matplotlib.pyplot as plt
 
 def main():
     formerequation = ''
@@ -21,8 +20,8 @@ def main():
         img = classify.load(sys.argv[1])# WILL'S CODE
         equation = classify.process(img, 0.1)
         if equation == formerequation:
-            break
-
+            continue
+        formerequation = equation
         func = parse.parse(equation)
         graph.graph(func,True)
 

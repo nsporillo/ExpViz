@@ -2,7 +2,7 @@ from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
-plt.ion()
+#plt.ion()
 plt.show()
 
 class dummyEquations():
@@ -24,6 +24,7 @@ def graph(equation, final=False):
     freevars = equation.get_variables()
     plt.clf()
     plt.cla()
+    plt.ion()
     if len(freevars) == 2:
         xs = list(np.arange(100))
         ys = equation.evaluate([np.arange(100)])
@@ -48,6 +49,7 @@ def graph(equation, final=False):
         ax.set_zlabel(freevars[0])
         plt.draw()
         plt.pause(0.001)
+    plt.ioff()
     return plt
 
 if __name__ == "__main__":
