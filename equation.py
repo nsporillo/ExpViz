@@ -1,18 +1,25 @@
 from abc import ABC, abstractmethod
 import numpy as np
+import copy
 
 
 class Function(ABC):
     def __init__(self, components):
         self.components = components
         self.variables = set()
+        self.dependent = "Result"
 
     def __repr__(self):
         return repr(self.variables)
 
     def get_variables(self):
+        tmp = copy.copy(self.variables)
+        tmp.insert(0, self.dependent)
+        return tmp
+
+    def init_variables(self):
         for component in self.components:
-            self.variables.update(component.get_variables())
+            self.variables.update(component.init_variables())
         self.update_variable_indxs()
         return self.variables
 
@@ -141,7 +148,7 @@ class Constant(Function):
     def __repr__(self):
         return "(" + repr(self.components[0]) + ")"
 
-    def get_variables(self):
+    def init_variables(self):
         return set()
 
     def update_variable_indxs(self, vars=[]):
@@ -163,7 +170,7 @@ class Variable(Function):
     def __repr__(self):
         return "(" + repr(self.components[0]) + ")"
 
-    def get_variables(self):
+    def init_variables(self):
         return self.variables
 
     def update_variable_indxs(self, vars=[]):
