@@ -26,6 +26,10 @@ def main():
 		get_equation(image, template_box)
 
 
+def getSubImage(image,template):
+	template_box = iterative_template_match(template, image)
+	get_equation(image, template_box)
+
 def iterative_template_match(template, image):
 
 	template = cv2.pyrDown(template)
@@ -88,46 +92,40 @@ def get_equation(img, template_box):
 	connectivity = 4  
 	# Perform the operation
 	output = cv2.connectedComponentsWithStats(filled, connectivity, cv2.CV_32S)
-	right_bounds = get_equation_end(output[2])
-	imshow_components(output[1], right_bounds)
+
+	imshow_components(output[1])
+	box = chaincomponents(output)
+	print(box)
+	cv2.imshow('debug', cropped[int(box[1]):int(box[3]),int(box[0]):int(box[2])])
+	cv2.waitKey()
 
 
-def get_equation_end(stats):
-
-	# Get bounds of all components
-	starts = []
-	ends = []
-	max_gap = 40
-	for stat in stats:
-		start.append(stat[cv2.CC_STAT_LEFT])
-		ends.append(stat[cv2.CC_STAT_LEFT] + stat[cv2.CC_STAT_WIDTH] - 1)
-
-	starts.sort()
-	ends.sort()
-
-	running = 0
-	while len(starts) > 0:
-		if starts[0] < ends[0]:
-			starts.pop(0)
-			running += 1
-		else if starts[0] > ends[0]:
-			ends.pop(0)
-			running -= 1
+def chaincomponents(components):
+	stats = components[2]
+	centroids = components[3]
+	stats = np.append(stats, centroids, axis=1)
+	combine = np.array(sorted(stats, key=lambda x: (x[0], x[1])))
+	centroids = list(combine[:, -2:])
+	stats = list(combine[:, :-2])
+	sleft, stop, swidth, sheight, sarea = stats[1][0], stats[1][1], stats[1][2], stats[1][3], stats[1][4]
+	result = [sleft, stop, sleft+swidth, stop+sheight]
+	for x in range(1,len(centroids)-1):
+		sleft, stop, swidth, sheight, sarea = stats[x][0], stats[x][1], stats[x][2], stats[x][3], stats[x][4]
+		if sarea < 50:
+			continue
+		n = centroids[x+1]
+		c = centroids[x]
+		nleft, ntop, nwidth, nheight, narea = stats[x+1][0], stats[x+1][1], stats[x+1][2], stats[x+1][3], stats[x+1][4]
+		if sleft + 3*swidth > nleft:
+			result[1] = min(ntop,result[1])
+			result[2] = max(nleft+nwidth,result[2])
+			result[3] = max(result[3],nheight+ntop)
 		else:
-			starts.pop(0)
-			ends.pop(0)
+			break
+	return result
 
 
-	running = 0
-	for bound in bounds:
-		if bound - prev > max_gap:
-			return 
-	print(bounds)
-	return(bounds)
-
-
-
-def imshow_components(labels, cuts):
+def imshow_components(labels, cuts=0):
 	"""
 	Display components throughout hue range.
 	"""
@@ -141,9 +139,6 @@ def imshow_components(labels, cuts):
 
 	# set bg label to black
 	labeled_img[label_hue==0] = 0
-
-	for cut in cuts:
-		labeled_img[:, cut, :] = 255
 
 	cv2.imshow('debug', labeled_img)
 	cv2.waitKey()
