@@ -189,14 +189,15 @@ def primer():
 def parse(string):
     global grammar
     func = cyk(string, grammar)
-    if len(func) == 2:
-        func[1].dependent = func[0]
-        func = func[1]
-    else:
-        func = func[0]
-    func.init_variables()
-    func.update_variable_indxs()
-    return func
+    if func:
+        if len(func) == 2:
+            func[1].dependent = func[0]
+            func = func[1]
+        else:
+            func = func[0]
+        func.init_variables()
+        func.update_variable_indxs()
+        return func
 
 
 if __name__=='__main__':

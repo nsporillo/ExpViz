@@ -21,36 +21,38 @@ class dummyEquations1():
         return (3*l['x']**2)
 
 def graph(equation, final=False):
-    freevars = equation.get_variables()
-    plt.clf()
-    plt.cla()
-    plt.ion()
-    if len(freevars) == 2:
-        xs = list(np.arange(100))
-        ys = equation.evaluate([np.arange(100)])
-        #fig = plt.figure()
-        plt.xlabel(freevars[1])
-        plt.ylabel(freevars[0])
-        plt.plot(xs,ys)
-        #plt.ylabel('some numbers')
-        #plt.show()
-        plt.draw()
-        plt.pause(0.001)
-    if len(freevars) == 3:
-        xs, ys = np.meshgrid(np.linspace(0,100,30),np.linspace(0,100,30))
-        zs = equation.evaluate([xs,ys])
-        plt.subplot()
-        ax = plt.axes(projection='3d')
-        ax.plot_surface(xs, ys, zs, rstride=1, cstride=1,
-                        cmap='viridis', edgecolor='none')
-        ax.set_title('surface')
-        ax.set_xlabel(freevars[1])
-        ax.set_ylabel(freevars[2])
-        ax.set_zlabel(freevars[0])
-        plt.draw()
-        plt.pause(0.001)
-    plt.ioff()
-    return plt
+
+    if equation:
+        freevars = equation.get_variables()
+        plt.clf()
+        plt.cla()
+        plt.ion()
+        if len(freevars) == 2:
+            xs = list(np.arange(100))
+            ys = equation.evaluate([np.arange(100)])
+            #fig = plt.figure()
+            plt.xlabel(freevars[1])
+            plt.ylabel(freevars[0])
+            plt.plot(xs,ys)
+            #plt.ylabel('some numbers')
+            #plt.show()
+            plt.draw()
+            plt.pause(0.001)
+        if len(freevars) == 3:
+            xs, ys = np.meshgrid(np.linspace(0,100,30),np.linspace(0,100,30))
+            zs = equation.evaluate([xs,ys])
+            plt.subplot()
+            ax = plt.axes(projection='3d')
+            ax.plot_surface(xs, ys, zs, rstride=1, cstride=1,
+                            cmap='viridis', edgecolor='none')
+            ax.set_title('surface')
+            ax.set_xlabel(freevars[1])
+            ax.set_ylabel(freevars[2])
+            ax.set_zlabel(freevars[0])
+            plt.draw()
+            plt.pause(0.001)
+        plt.ioff()
+        return plt
 
 if __name__ == "__main__":
     p = graph(dummyEquations())
