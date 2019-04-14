@@ -6,6 +6,12 @@ import pickle
 
 from preprocessing import *
 
+model = None
+mapping = None
+
+lookup = {'\\doteq':'=', '\\neg':'-', '\\ast':'*',
+                                '[':'(', ']':')'}
+
 
 def load_model(bin_dir):
     # load YAML and create model
@@ -46,7 +52,7 @@ def plot_images(imgs, title):
     plt.show()
 
 
-def process(img, minconf):
+def process(img, minconf, debug=False):
     blur = cv.medianBlur(cv.medianBlur(img, 3), 3)
     _, th2 = cv.threshold(blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
     th2 = cv.dilate(th2, np.ones((3, 3), dtype=np.uint8), iterations=1)
@@ -60,7 +66,7 @@ def process(img, minconf):
     res = to_bgr(np.ones((th2.shape[0], th2.shape[1]), dtype=np.uint8) * 255)
     chars = []
     areas = 0
-
+    equation = ""
     for i in range(len(stats)):
         sleft, stop, swidth, sheight, sarea = stats[i][0], stats[i][1], stats[i][2], stats[i][3], stats[i][4]
         if sarea > 500:
@@ -79,18 +85,29 @@ def process(img, minconf):
             if float(conf) > float(minconf):
                 index = int(np.argmax(result, axis=1)[0])
                 print("Pred= [" + mapping[index] + "] conf= " + conf + " area=" + str(sarea))
-                cv.putText(res, mapping[index], (sleft, stop), cv.FONT_HERSHEY_SIMPLEX, 3, (255, 0, 0), 3)
+                c = mapping[index]
+                if mapping[index] in lookup:
+                    c = lookup[mapping[index]]
+                equation += c
+                if debug:
+                    cv.putText(res, mapping[index], (sleft, stop), cv.FONT_HERSHEY_SIMPLEX, 3, (255, 0, 0), 3)
+            if debug:
+                cv.rectangle(bounds, (sleft, stop), (sleft + swidth, stop + sheight), (0, 0, 255), thickness=2)
 
-            cv.rectangle(bounds, (sleft, stop), (sleft + swidth, stop + sheight), (0, 0, 255), thickness=2)
+    if debug:
+        print('Average area: ' + str(areas / (nb_components - 1)))
 
-    print('Average area: ' + str(areas / (nb_components - 1)))
+        bounds = cv.resize(bounds, None, fx=0.5, fy=0.5)
+        res = cv.resize(res, None, fx=0.5, fy=0.5)
+        plt.axis("off")
+        plt.imshow(np.vstack((bounds, res)))
+        plot_images(chars, 'Chars')
+    return equation
 
-    bounds = cv.resize(bounds, None, fx=0.5, fy=0.5)
-    res = cv.resize(res, None, fx=0.5, fy=0.5)
-    plt.axis("off")
-    plt.imshow(np.vstack((bounds, res)))
-    plot_images(chars, 'Chars')
-
+def primer():
+    global model,mapping
+    model = load_model('bin')
+    mapping = pickle.load(open('bin/mapping.p', 'rb'))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Classify symbols in an image.')
