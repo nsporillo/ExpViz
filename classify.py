@@ -72,7 +72,7 @@ def process(img, minconf, debug=False):
         if sarea > 500:
             areas += sarea
             # Crop the bounding box of the symbol y:y+h, x:x+w
-            dbbox = th2[(stop - 2):(stop + sheight + 2), (sleft - 2):(sleft + swidth + 2)]
+            dbbox = th2[max((stop - 2),0):min((stop + sheight + 2),th2.shape[0]-1), max(0,(sleft - 2)):min((sleft + swidth + 2),th2.shape[1]-1)]
             scale = min(28.0 / swidth, 28.0 / sheight)
             ci = np.invert(padto((28, 28), cv.resize(flood_fill(dbbox),
                                                      (int(round(swidth * scale)), int(round(sheight * scale))))))

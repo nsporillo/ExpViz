@@ -57,6 +57,7 @@ def radialJoin(img, stats, centroids):
     stats = stats[1:]
     centroidTree = kdtree.KDTree(centroids, 10)
     nearests = centroidTree.query(centroids, 5)[1][:, 1:]
+    neighbors = len(nearests[0])
     covered = {}
     results = []
     for x in range(len(nearests)):
@@ -64,10 +65,12 @@ def radialJoin(img, stats, centroids):
         sleft, stop, swidth, sheight, sarea = stats[x][0], stats[x][1], stats[x][2], stats[x][3], stats[x][4]
         if sarea < 100:
             continue
-        for y in range(4):
+        for y in range(neighbors):
             if over:
                 continue
             if x in covered or nearests[x][y] in covered:
+                continue
+            if nearests[x][y] == len(centroids):
                 continue
             n = centroids[nearests[x][y]]
             c = centroids[x]
