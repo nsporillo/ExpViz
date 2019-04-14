@@ -9,7 +9,7 @@ import hasy_tools
 import keras
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.layers import MaxPooling2D, Convolution2D, Dropout, Dense, Flatten
+from keras.layers import *
 from keras.models import Sequential, save_model
 from keras.utils import np_utils
 from keras.utils.vis_utils import plot_model
@@ -119,7 +119,7 @@ def load_hasy_data(start=0, classes=None):
             realindices[index] = int(start + i)
             i += 1
 
-    print("Chosen Hasy Class Indices: " + str(indices) + ', Mapping = [' + str(realindices.values) + ']')
+    print("Chosen Hasy Class Indices: " + str(indices) + ', Mapping = [' + str(realindices.values()) + ']')
 
     # Load training data
     training_labels = data['y_train'][:data['x_train'].shape[0]]
@@ -214,14 +214,22 @@ def build_net(num_classes, width=28, height=28):
     input_shape = (height, width, 1)
 
     model = Sequential()
-    model.add(Convolution2D(256, (3, 3), padding='valid', input_shape=input_shape, activation='relu'))
-    model.add(Convolution2D(64, (3, 3), activation='relu'))
+    model.add(Convolution2D(256, (3, 3), padding="same", input_shape=input_shape))
+    model.add(BatchNormalization())
+    model.add(Activation("relu"))
+
+    model.add(Convolution2D(64, (3, 3)))
+    model.add(BatchNormalization())
+    model.add(Activation("relu"))
+
+    #model.add(Convolution2D(256, (3, 3), padding='valid', input_shape=input_shape, activation='relu'))
+    #model.add(Convolution2D(64, (3, 3), activation='relu'))
 
     model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(rate=0.2))
 
     model.add(Flatten())
-    model.add(Dense(512, activation='relu'))
+    model.add(Dense(256, activation='relu'))
+    model.add(Dropout(rate=0.15))
     model.add(Dense(num_classes, activation='softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
@@ -254,9 +262,9 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
     y_test = np_utils.to_categorical(y_test, num_classes)
 
     datagen = keras.preprocessing.image.ImageDataGenerator(
-        width_shift_range=0.1,
-        height_shift_range=0.1,
-        zoom_range=0.1,
+        width_shift_range=0.05,
+        height_shift_range=0.05,
+        zoom_range=0.15,
         fill_mode='nearest')
 
     datagen.fit(x_train)
@@ -304,7 +312,7 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(usage='Program to train a CNN for symbol detection')
     parser.add_argument('-f', '--file', type=str, help='EMNIST file to use for training', required=True)
-    parser.add_argument('--epochs', type=int, default=5, help='Number of epochs to train on')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train on')
     args = parser.parse_args()
 
     bin_dir = os.path.dirname(os.path.realpath(__file__)) + '/bin'
@@ -318,8 +326,7 @@ if __name__ == '__main__':
     emnist_mapping = emnist_data[3]
     print('EMNIST data loaded ' + str(emnist_data[2]) + ' classes')
     hasy_data = load_hasy_data(len(emnist_mapping),
-                               ['+', '-', '\\pi', '\\forall', '\\doteq', '/', '\\neg', '\\ast',
-                                '[', ']'])
+                               ['+', '-', '\\doteq', '/', '\\neg', '\\ast', '[', ']'])
     hasy_mapping = hasy_data[3]
     print('Hasy data loaded ' + str(hasy_data[2]) + ' classes')
 
