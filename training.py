@@ -268,12 +268,13 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
         fill_mode='nearest')
 
     datagen.fit(x_train)
-
+    tbCallBack = keras.callbacks.TensorBoard(log_dir='./TB', histogram_freq=0, write_graph=True, write_images=True)
     history = model.fit_generator(datagen.flow(x_train, y_train, batch_size=batch_size),
                                   steps_per_epoch=x_train.shape[0] // batch_size,
                                   epochs=epochs,
                                   verbose=1,
-                                  validation_data=(x_test, y_test))
+                                  validation_data=(x_test, y_test),
+                                callbacks=[tbCallBack])
 
     print('Training took ' + str(datetime.timedelta(seconds=(time.time() - start))))
 
