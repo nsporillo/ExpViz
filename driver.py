@@ -26,12 +26,13 @@ def main():
         if img is None:
             continue
         try:
-            equation = classify.process(img, 0.1)
+            equation = classify.process(img, 0.1, debug=True)
             if equation == formerequation:
                 continue
             formerequation = equation
             func = parse.parse(equation)
             graph.graph(func,True)
+            cv2.waitKey()
         except(Exception):
             print("Equation was not parsable")
             print("Equation " + equation)

@@ -72,15 +72,15 @@ def iterative_template_match(template, image):
 		# the bookkeeping variable
 		if found is None or maxVal > found[0]:
 			found = (maxVal, maxLoc, r)
-		print(maxVal)
+		#print(maxVal)
  
 	# unpack the bookkeeping variable and compute the (x, y) coordinates
 	# of the bounding box based on the resized ratio
 	(_, maxLoc, r) = found
-	(startX, startY) = (int(maxLoc[0] * r), int(maxLoc[1] * r))
-	(endX, endY) = (int((maxLoc[0] + tW) * r), int((maxLoc[1] + tH) * r))
+	(startX, startY) = (int((maxLoc[0]) * r), int((maxLoc[1]) * r))
+	(endX, endY) = (int((maxLoc[0]+tW) * r), int((maxLoc[1]+tH) * r))
 	print(_)
-	if found[0]<20000000:
+	if found[0]<10000000:
 		return None
 	return (startX, startY, endX, endY)
 
@@ -109,7 +109,7 @@ def get_equation(img, template_box):
 	imshow_components(output[1])
 	box = chaincomponents(output)
 	print(box)
-	#cv2.imshow('debug', cropped[int(box[1]):int(box[3]),int(box[0]):int(box[2])])
+	cv2.imshow('debug', cropped[int(box[1]):int(box[3]),int(box[0]):int(box[2])])
 	#cv2.waitKey()
 	return cropped[int(box[1]):int(box[3]),int(box[0]):int(box[2])]
 
@@ -130,7 +130,7 @@ def chaincomponents(components):
 		n = centroids[x+1]
 		c = centroids[x]
 		nleft, ntop, nwidth, nheight, narea = stats[x+1][0], stats[x+1][1], stats[x+1][2], stats[x+1][3], stats[x+1][4]
-		if sleft + 3*swidth > nleft:
+		if sleft + 3*swidth > nleft and stop + 3*sheight > ntop:
 			result[1] = min(ntop,result[1])
 			result[2] = max(nleft+nwidth,result[2])
 			result[3] = max(result[3],nheight+ntop)
