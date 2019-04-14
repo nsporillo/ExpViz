@@ -94,15 +94,36 @@ def get_equation(img, template_box):
 
 def get_equation_end(stats):
 
-	# Get right bounds of all components and max gap
-	right_bounds = []
-	max_gap = 0
+	# Get bounds of all components
+	starts = []
+	ends = []
+	max_gap = 40
 	for stat in stats:
-		right_bounds.append(stat[cv2.CC_STAT_LEFT] + stat[cv2.CC_STAT_WIDTH])
+		start.append(stat[cv2.CC_STAT_LEFT])
+		ends.append(stat[cv2.CC_STAT_LEFT] + stat[cv2.CC_STAT_WIDTH] - 1)
 
-	right_bounds.sort()
-	print(right_bounds)
-	return(right_bounds)
+	starts.sort()
+	ends.sort()
+
+	running = 0
+	while len(starts) > 0:
+		if starts[0] < ends[0]:
+			starts.pop(0)
+			running += 1
+		else if starts[0] > ends[0]:
+			ends.pop(0)
+			running -= 1
+		else:
+			starts.pop(0)
+			ends.pop(0)
+
+
+	running = 0
+	for bound in bounds:
+		if bound - prev > max_gap:
+			return 
+	print(bounds)
+	return(bounds)
 
 
 
@@ -122,7 +143,7 @@ def imshow_components(labels, cuts):
 	labeled_img[label_hue==0] = 0
 
 	for cut in cuts:
-		labeled_img[:, cut-1, :] = 255
+		labeled_img[:, cut, :] = 255
 
 	cv2.imshow('debug', labeled_img)
 	cv2.waitKey()
