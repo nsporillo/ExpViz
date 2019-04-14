@@ -222,8 +222,8 @@ def build_net(num_classes, width=28, height=28):
     model.add(BatchNormalization())
     model.add(Activation("relu"))
 
-    #model.add(Convolution2D(256, (3, 3), padding='valid', input_shape=input_shape, activation='relu'))
-    #model.add(Convolution2D(64, (3, 3), activation='relu'))
+    # model.add(Convolution2D(256, (3, 3), padding='valid', input_shape=input_shape, activation='relu'))
+    # model.add(Convolution2D(64, (3, 3), activation='relu'))
 
     model.add(MaxPooling2D(pool_size=(2, 2)))
 
@@ -264,7 +264,7 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
     datagen = keras.preprocessing.image.ImageDataGenerator(
         width_shift_range=0.05,
         height_shift_range=0.05,
-        zoom_range=0.15,
+        zoom_range=0.05,
         fill_mode='nearest')
 
     datagen.fit(x_train)
@@ -320,9 +320,8 @@ if __name__ == '__main__':
         os.makedirs(bin_dir)
 
     emnist_data = load_emnist_data(args.file, ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-                                               'A', 'U'
-                                                    'a', 'b', 'c', 'd', 'e', 'i', 'o', 'm', 'n', 's', 'v', 'x', 'y',
-                                               'z'])
+                                               'A', 'M', 'S', 'V', 'X', 'Z', 'U',
+                                                         'a', 'b', 'c', 'd', 'e', 'i', 'o', 'n', 'y'])
     emnist_mapping = emnist_data[3]
     print('EMNIST data loaded ' + str(emnist_data[2]) + ' classes')
     hasy_data = load_hasy_data(len(emnist_mapping),
