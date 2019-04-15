@@ -29,20 +29,21 @@ def main():
             print('Exiting')
             break
         frame = cap.read()[1]
-        img = td.getSubImage(frame, temp)# WILL'S CODE
-        if img is None:
+        imgs = td.getSubImage(frame, temp)# WILL'S CODE
+        if imgs is None or len(imgs) is 0:
             continue
-        try:
-            equation = classify.process(img, 0.1, debug=False)
-            if equation == formerequation:
-                continue
-            formerequation = equation
-            func = parse.parse(equation)
-            graph.graph(func,True)
-            cv2.waitKey()
-        except(Exception):
-            print("Equation was not parsable")
-            print("Equation " + equation)
+        for img in imgs:
+            try:
+                equation = classify.process(img, 0.1, debug=False)
+                if equation == formerequation:
+                    continue
+                formerequation = equation
+                func = parse.parse(equation)
+                graph.graph(func,True)
+                cv2.waitKey()
+            except(Exception):
+                print("Equation was not parsable")
+                print("Equation " + equation)
 
 
 def get_new_template(dest):

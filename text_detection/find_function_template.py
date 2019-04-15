@@ -30,11 +30,15 @@ def getSubImage(image,template):
 	template_box = iterative_template_match(template, image)
 	if template_box is None:
 		return None
-	pic = get_equation(image, template_box)
-	if pic is None:
-		return None
-	pic = cv2.cvtColor(pic, cv2.COLOR_BGR2GRAY)
-	return np.array(pic, dtype=np.uint8)
+	pics = []
+	for t in template_box:
+		print(t)
+		pic = get_equation(image, t)
+		if pic is None:
+			continue
+		pic = cv2.cvtColor(pic, cv2.COLOR_BGR2GRAY)
+		pics.append(np.array(pic, dtype=np.uint8))
+	return pics
 
 def iterative_template_match(template, image):
 
@@ -63,11 +67,17 @@ def iterative_template_match(template, image):
 	stats = np.append(stats, centroids, axis=1)
 	combine = np.array(sorted(stats, key=lambda x: (x[4])))
 	stats = list(combine[:, :-2])
-	sleft, stop, swidth, sheight, sarea = stats[-2]
-	if sarea<100:
-		return None
-	print((int(sleft),int(stop),int(sleft+swidth),int(stop+sheight)))
-	return  (int(sleft),int(stop),int(sleft+swidth),int(stop+sheight))
+	bluelist = []
+	stats = stats[:-1]
+	for stat in stats[::-1]:
+		sleft, stop, swidth, sheight, sarea = stat
+		if sarea > 100:
+			bluelist.append((int(sleft),int(stop),int(sleft+swidth),int(stop+sheight)))
+	#sleft, stop, swidth, sheight, sarea = stats[-1]
+	#if sarea<100:
+	#	return None
+	print(bluelist)
+	return  bluelist
 
 
 def get_equation(img, template_box):
