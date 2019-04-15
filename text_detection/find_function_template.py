@@ -30,64 +30,60 @@ def getSubImage(image,template):
 	template_box = iterative_template_match(template, image)
 	if template_box is None:
 		return None
-	pic = get_equation(image, template_box)
-	if pic is None:
-		return None
-	pic = cv2.cvtColor(pic, cv2.COLOR_BGR2GRAY)
-	return np.array(pic, dtype=np.uint8)
+	pics = []
+	for t in template_box:
+		print(t)
+		pic = get_equation(image, t)
+		if pic is None:
+			continue
+		pic = cv2.cvtColor(pic, cv2.COLOR_BGR2GRAY)
+		pics.append(np.array(pic, dtype=np.uint8))
+	return pics
 
 def iterative_template_match(template, image):
 
-	template = cv2.pyrDown(template)
-	template = cv2.pyrDown(template)
-	template = cv2.pyrDown(template)
-	template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-	template = cv2.Canny(template, 50, 200)
-	(tH, tW) = template.shape[:2]
+	cv2.namedWindow('test', cv2.WINDOW_NORMAL)
 
-	# convert the image to grayscale, and initialize the
-	# bookkeeping variable to keep track of the matched region
-	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-	found = None
- 
-	# loop over the scales of the image
-	for scale in np.linspace(0.2, 1.0, 20)[::-1]:
-		# resize the image according to the scale, and keep track
-		# of the ratio of the resizing
-		resized = imutils.resize(gray, width = int(gray.shape[1] * scale))
-		r = gray.shape[1] / float(resized.shape[1])
- 
-		# if the resized image is smaller than the template, then break
-		# from the loop
-		if resized.shape[0] < tH or resized.shape[1] < tW:
-			break
+	img = image
+	img = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+	lower_blue= np.array([78,158,124])
+	upper_blue = np.array([138,255,255])
 
-		# detect edges in the resized, grayscale image and apply template
-		# matching to find the template in the image
-		edged = cv2.Canny(resized, 50, 200)
-		result = cv2.matchTemplate(edged, template, cv2.TM_CCOEFF)
-		(_, maxVal, _, maxLoc) = cv2.minMaxLoc(result)
- 
-		# if we have found a new maximum correlation value, then update
-		# the bookkeeping variable
-		if found is None or maxVal > found[0]:
-			found = (maxVal, maxLoc, r)
-		#print(maxVal)
- 
-	# unpack the bookkeeping variable and compute the (x, y) coordinates
-	# of the bounding box based on the resized ratio
-	(_, maxLoc, r) = found
-	(startX, startY) = (int((maxLoc[0]) * r), int((maxLoc[1]) * r))
-	(endX, endY) = (int((maxLoc[0]+tW) * r), int((maxLoc[1]+tH) * r))
-	print(_)
-	if found[0]<10000000:
-		return None
-	return (startX, startY, endX, endY)
+	mask = cv2.inRange(img,lower_blue,upper_blue)
+
+	blues = np.where((img[...,0]>100)&(img[...,0]<135)&(img[...,2]>50)&(img[...,1]>25))
+
+	mask = np.zeros(img.shape[:-1], dtype=np.uint8)
+	mask[blues] = 255
+	kernel = np.zeros((5,5),dtype = np.uint8)
+	kernel[:,2] = 1
+	mask = cv2.erode(mask,kernel,iterations=2)
+	mask = cv2.dilate(mask,kernel,iterations=2)
+	#cv2.imshow("test",mask)
+	#cv2.waitKey()
+	components = cv2.connectedComponentsWithStats(mask, 8, cv2.CV_32S)
+	stats = components[2]
+	centroids = components[3]
+	stats = np.append(stats, centroids, axis=1)
+	combine = np.array(sorted(stats, key=lambda x: (x[4])))
+	stats = list(combine[:, :-2])
+	bluelist = []
+	stats = stats[:-1]
+	for stat in stats[::-1]:
+		sleft, stop, swidth, sheight, sarea = stat
+		if sarea > 100:
+			bluelist.append((int(sleft),int(stop),int(sleft+swidth),int(stop+sheight)))
+	#sleft, stop, swidth, sheight, sarea = stats[-1]
+	#if sarea<100:
+	#	return None
+	print(bluelist)
+	return  bluelist
 
 
 def get_equation(img, template_box):
 
 	sX, sY, eX, eY = template_box
+	print (template_box)
 	cropped = img[sY:eY, eX:, :]
 	if len(cropped) == 0:
 		return None
