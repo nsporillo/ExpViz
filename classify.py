@@ -55,9 +55,9 @@ def plot_images(imgs, title):
 def process(img, minconf, debug=False):
     blur = cv.medianBlur(cv.medianBlur(img, 3), 3)
     _, th2 = cv.threshold(blur, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
-    th2 = cv.dilate(th2, np.ones((3, 3), dtype=np.uint8), iterations=1)
+    #th2 = cv.dilate(th2, np.ones((3, 3), dtype=np.uint8), iterations=1)
     th2 = cv.erode(th2, np.ones((5, 5), dtype=np.uint8), iterations=2)
-    th2 = cv.dilate(th2, np.ones((5, 5), dtype=np.uint8), iterations=1)
+    #th2 = cv.dilate(th2, np.ones((5, 5), dtype=np.uint8), iterations=1)
     th2 = deskew(th2)
     nb_components, _, stats, centroids = cv.connectedComponentsWithStats(cv.bitwise_not(th2), connectivity=8)
     stats = radialJoin(img, stats, centroids)

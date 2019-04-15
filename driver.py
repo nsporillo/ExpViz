@@ -4,7 +4,13 @@ import graph
 import argparse
 import cv2
 import sys
-from findFunction import getSubImage
+import text_detection.find_function_template as td
+
+import os
+
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
+
 
 def main():
     get_new_template('text_detection/simple.jpg')
@@ -13,26 +19,30 @@ def main():
     parse.primer()
     classify.primer()
     cv2.namedWindow('Exit Window',cv2.WINDOW_NORMAL)
-
-    testing_search_img = cv2.imread('text_detection/search_images/search.jpg')
-    template = cv2.imread('text_detection/simple.jpg')
+    cap = cv2.VideoCapture(0)
+    frame = cap.read()[1]
+    temp = cv2.imread(sys.argv[1], cv2.IMREAD_UNCHANGED)
     while 1:
-        cv2.imshow('Exit Window', imgs)
+        cv2.imshow('Exit Window', frame)
         key = cv2.waitKey(1) & 0xFF
         if key == ord('e'):
             print('Exiting')
             break
-        equation_path = getSubImage(testing_search_img, template)
-        equation_img = cv2.imread(equation_path)
-        cv2.imshow('Exit Window', equation_img)
-        cv2.waitKey(0)
-        img = classify.load(equation_path)
-        equation = classify.process(img, 0.1, True)
-        if equation == formerequation:
+        frame = cap.read()[1]
+        img = td.getSubImage(frame, temp)# WILL'S CODE
+        if img is None:
             continue
-        formerequation = equation
-        func = parse.parse(equation)
-        graph.graph(func,True)
+        try:
+            equation = classify.process(img, 0.1, debug=False)
+            if equation == formerequation:
+                continue
+            formerequation = equation
+            func = parse.parse(equation)
+            graph.graph(func,True)
+            cv2.waitKey()
+        except(Exception):
+            print("Equation was not parsable")
+            print("Equation " + equation)
 
 
 def get_new_template(dest):

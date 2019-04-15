@@ -28,7 +28,13 @@ def main():
 
 def getSubImage(image,template):
 	template_box = iterative_template_match(template, image)
-	get_equation(image, template_box)
+	if template_box is None:
+		return None
+	pic = get_equation(image, template_box)
+	if pic is None:
+		return None
+	pic = cv2.cvtColor(pic, cv2.COLOR_BGR2GRAY)
+	return np.array(pic, dtype=np.uint8)
 
 def iterative_template_match(template, image):
 
@@ -66,13 +72,16 @@ def iterative_template_match(template, image):
 		# the bookkeeping variable
 		if found is None or maxVal > found[0]:
 			found = (maxVal, maxLoc, r)
+		#print(maxVal)
  
 	# unpack the bookkeeping variable and compute the (x, y) coordinates
 	# of the bounding box based on the resized ratio
 	(_, maxLoc, r) = found
-	(startX, startY) = (int(maxLoc[0] * r), int(maxLoc[1] * r))
-	(endX, endY) = (int((maxLoc[0] + tW) * r), int((maxLoc[1] + tH) * r))
-
+	(startX, startY) = (int((maxLoc[0]) * r), int((maxLoc[1]) * r))
+	(endX, endY) = (int((maxLoc[0]+tW) * r), int((maxLoc[1]+tH) * r))
+	print(_)
+	if found[0]<10000000:
+		return None
 	return (startX, startY, endX, endY)
 
 
@@ -80,6 +89,8 @@ def get_equation(img, template_box):
 
 	sX, sY, eX, eY = template_box
 	cropped = img[sY:eY, eX:, :]
+	if len(cropped) == 0:
+		return None
 	cv2.imshow("Image", cropped)
 
 	gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
@@ -93,11 +104,14 @@ def get_equation(img, template_box):
 	# Perform the operation
 	output = cv2.connectedComponentsWithStats(filled, connectivity, cv2.CV_32S)
 
+	if output[0]<2:
+		return None
 	imshow_components(output[1])
 	box = chaincomponents(output)
 	print(box)
 	cv2.imshow('debug', cropped[int(box[1]):int(box[3]),int(box[0]):int(box[2])])
-	cv2.waitKey()
+	#cv2.waitKey()
+	return cropped[int(box[1]):int(box[3]),int(box[0]):int(box[2])]
 
 
 def chaincomponents(components):
@@ -116,7 +130,7 @@ def chaincomponents(components):
 		n = centroids[x+1]
 		c = centroids[x]
 		nleft, ntop, nwidth, nheight, narea = stats[x+1][0], stats[x+1][1], stats[x+1][2], stats[x+1][3], stats[x+1][4]
-		if sleft + 3*swidth > nleft:
+		if sleft + 3*swidth > nleft and stop + 3*sheight > ntop:
 			result[1] = min(ntop,result[1])
 			result[2] = max(nleft+nwidth,result[2])
 			result[3] = max(result[3],nheight+ntop)
@@ -141,7 +155,7 @@ def imshow_components(labels, cuts=0):
 	labeled_img[label_hue==0] = 0
 
 	cv2.imshow('debug', labeled_img)
-	cv2.waitKey()
+	#cv2.waitKey()
 
 
 if __name__ == '__main__':
