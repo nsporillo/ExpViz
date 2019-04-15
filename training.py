@@ -8,7 +8,8 @@ import cv2 as cv
 import hasy_tools
 import keras
 import matplotlib.pyplot as plt
-import numpy as np
+import keract
+import keract.utils as utils
 from keras.layers import *
 from keras.models import Sequential, save_model
 from keras.utils import np_utils
@@ -298,6 +299,13 @@ def train(model, training_data, mapping, num_classes, batch_size=256, epochs=10,
         plt.xlabel('Epoch')
         plt.legend(['Train', 'Test'], loc='upper left')
         plt.savefig('plots/latest_loss.png')
+
+        utils.print_names_and_shapes(keract.get_activations(model, x_test[0:200]))  # with 200 samples.
+        utils.print_names_and_shapes(keract.get_gradients_of_trainable_weights(model, x_train[0:10], y_train[0:10]))
+        utils.print_names_and_shapes(keract.get_gradients_of_activations(model, x_train[0:10], y_train[0:10]))
+
+        a = keract.get_activations(model, x_test[0:1])  # with just one sample.
+        keract.display_activations(a)
 
     score = model.evaluate(x_test, y_test, verbose=0)
     print('Test score:', score[0])

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
+
 def load_model(bin_dir):
     # load YAML and create model
     yaml_file = open('%s/model.yaml' % bin_dir, 'r')
