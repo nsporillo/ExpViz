@@ -38,11 +38,6 @@ def getSubImage(image,template):
 
 def iterative_template_match(template, image):
 
-	template = cv2.pyrDown(template)
-	template = cv2.pyrDown(template)
-	template = cv2.pyrDown(template)
-	template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-	template = cv2.Canny(template, 50, 200)
 	(tH, tW) = template.shape[:2]
 
 	# convert the image to grayscale, and initialize the
