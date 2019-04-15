@@ -4,6 +4,8 @@ import cv2 as cv
 import numpy as np
 from keras.models import model_from_yaml
 import matplotlib.pyplot as plt
+import os
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 def load_model(bin_dir):
     # load YAML and create model
@@ -28,15 +30,15 @@ def crop(img):
                                               stats[i, cv.CC_STAT_AREA]
         # print(sarea, sleft, stop, swidth, sheight)
         # Crop the bounding box of the character
-        crp = img[(stop - 2):(stop + sheight+2), (sleft-2):(sleft + swidth+2)]
+        crp = img[(stop - 2):(stop + sheight + 2), (sleft - 2):(sleft + swidth + 2)]
         return crp, swidth, sheight
 
 
 def main():
     fonts = [cv.FONT_HERSHEY_SIMPLEX, cv.FONT_HERSHEY_DUPLEX, cv.FONT_HERSHEY_COMPLEX]
-    alphabet = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',
-                'l', 'o', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
-                'L', 'O', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+    alphabet = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                'A', 'M', 'S', 'V', 'X', 'Z', 'U',
+                'a', 'b', 'c', 'd', 'e', 'i', 'o', 'n', 'y']
 
     dataset = []
 
@@ -77,7 +79,6 @@ def main():
     plt.ylabel('Confidence')
     plt.plot(x, confs)
     plt.plot(x, results)
-    plt.axvline(x=30, color='b')
 
     plt.figure(figsize=(14, 8))
     plt.title('Misclassified symbols')
