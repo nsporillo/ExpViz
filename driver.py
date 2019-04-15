@@ -7,6 +7,7 @@ import sys
 import text_detection.find_function_template as td
 
 def main():
+    get_new_template()
     formerequation = ''
     imgs = cv2.imread('data/test715.jpg')
     parse.primer()
@@ -36,6 +37,27 @@ def main():
         except(Exception):
             print("Equation was not parsable")
             print("Equation " + equation)
+
+
+def get_new_template(dest):
+    cap = cv2.VideoCapture(0)
+    cv2.namedWindow("New Template (press 'q' to ignore)", cv2.WINDOW_NORMAL)
+
+    while True:
+        ret, frame = cap.read()
+        cv2.imshow("New Template (press 'q' to ignore)", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        if cv2.waitKey(1) & 0xFF == ord(' '):
+            frame = cv2.pyrDown(frame)
+            frame = cv2.pyrDown(frame)
+            frame = cv2.pyrDown(frame)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            cv2.imwrite(dest, frame)
+            return
+
+    cap.release()
+    cv2.destroyWindow("New Template")
 
 if __name__ == '__main__':
     main()
