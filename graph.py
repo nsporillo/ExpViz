@@ -25,6 +25,17 @@ def graph(equation, final=False):
     plt.clf()
     plt.cla()
     plt.ion()
+    if len(freevars) == 1:
+        xs = list(np.arange(100))
+        ys = np.ones(100) * equation.evaluate([])
+        #fig = plt.figure()
+        plt.xlabel('x')
+        plt.ylabel(freevars[0])
+        plt.plot(xs,ys)
+        #plt.ylabel('soeme numbers')
+        #plt.show()
+        plt.draw()
+        plt.pause(0.001)
     if len(freevars) == 2:
         xs = list(np.arange(100))
         ys = equation.evaluate([np.arange(100)])
