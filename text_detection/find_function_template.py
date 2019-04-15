@@ -38,46 +38,68 @@ def getSubImage(image,template):
 
 def iterative_template_match(template, image):
 
-	(tH, tW) = template.shape[:2]
+	orb = cv2.ORB_create()
 
-	# convert the image to grayscale, and initialize the
-	# bookkeeping variable to keep track of the matched region
-	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-	found = None
- 
-	# loop over the scales of the image
-	for scale in np.linspace(0.2, 1.0, 20)[::-1]:
-		# resize the image according to the scale, and keep track
-		# of the ratio of the resizing
-		resized = imutils.resize(gray, width = int(gray.shape[1] * scale))
-		r = gray.shape[1] / float(resized.shape[1])
- 
-		# if the resized image is smaller than the template, then break
-		# from the loop
-		if resized.shape[0] < tH or resized.shape[1] < tW:
-			break
+	cv2.namedWindow('template', cv2.WINDOW_NORMAL)
 
-		# detect edges in the resized, grayscale image and apply template
-		# matching to find the template in the image
-		edged = cv2.Canny(resized, 50, 200)
-		result = cv2.matchTemplate(edged, template, cv2.TM_CCOEFF)
-		(_, maxVal, _, maxLoc) = cv2.minMaxLoc(result)
+	kp1, des1 = orb.detectAndCompute(template, None)
+	kp2, des2 = orb.detectAndCompute(image, None)
+
+	bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+
+	matches = bf.match(des1,des2)
+
+	matches = sorted(matches, key = lambda x:x.distance)
+
+	img3 = None
+	img3 = cv2.drawMatches(template,kp1,image,kp2,matches[:10], flags=2, outImg=img3)
+	cv2.imshow('template', img3)
+	cv2.waitKey(10)
+
+	#for match in matches:
+	#	print(match.distance)
+
+	print(sum([x.distance for x in matches]))
+	# (tH, tW) = template.shape[:2]
+
+	# # convert the image to grayscale, and initialize the
+	# # bookkeeping variable to keep track of the matched region
+	# gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	# found = None
  
-		# if we have found a new maximum correlation value, then update
-		# the bookkeeping variable
-		if found is None or maxVal > found[0]:
-			found = (maxVal, maxLoc, r)
-		#print(maxVal)
+	# # loop over the scales of the image
+	# for scale in np.linspace(0.2, 1.0, 20)[::-1]:
+	# 	# resize the image according to the scale, and keep track
+	# 	# of the ratio of the resizing
+	# 	resized = imutils.resize(gray, width = int(gray.shape[1] * scale))
+	# 	r = gray.shape[1] / float(resized.shape[1])
  
-	# unpack the bookkeeping variable and compute the (x, y) coordinates
-	# of the bounding box based on the resized ratio
-	(_, maxLoc, r) = found
-	(startX, startY) = (int((maxLoc[0]) * r), int((maxLoc[1]) * r))
-	(endX, endY) = (int((maxLoc[0]+tW) * r), int((maxLoc[1]+tH) * r))
-	print(_)
-	if found[0]<10000000:
-		return None
-	return (startX, startY, endX, endY)
+	# 	# if the resized image is smaller than the template, then break
+	# 	# from the loop
+	# 	if resized.shape[0] < tH or resized.shape[1] < tW:
+	# 		break
+
+	# 	# detect edges in the resized, grayscale image and apply template
+	# 	# matching to find the template in the image
+	# 	edged = cv2.Canny(resized, 50, 200)
+	# 	result = cv2.matchTemplate(edged, template, cv2.TM_CCOEFF)
+	# 	(_, maxVal, _, maxLoc) = cv2.minMaxLoc(result)
+ 
+	# 	# if we have found a new maximum correlation value, then update
+	# 	# the bookkeeping variable
+	# 	if found is None or maxVal > found[0]:
+	# 		found = (maxVal, maxLoc, r)
+	# 	#print(maxVal)
+ 
+	# # unpack the bookkeeping variable and compute the (x, y) coordinates
+	# # of the bounding box based on the resized ratio
+	# (_, maxLoc, r) = found
+	# (startX, startY) = (int((maxLoc[0]) * r), int((maxLoc[1]) * r))
+	# (endX, endY) = (int((maxLoc[0]+tW) * r), int((maxLoc[1]+tH) * r))
+	# print(_)
+	# if found[0]<10000000:
+	# 	return None
+	# return (startX, startY, endX, endY)
 
 
 def get_equation(img, template_box):

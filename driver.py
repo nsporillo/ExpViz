@@ -7,7 +7,7 @@ import sys
 import text_detection.find_function_template as td
 
 def main():
-    get_new_template()
+    #get_new_template('text_detection/simple.jpg')
     formerequation = ''
     imgs = cv2.imread('data/test715.jpg')
     parse.primer()
@@ -57,7 +57,7 @@ def get_new_template(dest):
             return
 
     cap.release()
-    cv2.destroyWindow("New Template")
+    cv2.destroyWindow("New Template (press 'q' to ignore)")
 
 if __name__ == '__main__':
     main()
