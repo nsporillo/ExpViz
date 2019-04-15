@@ -7,9 +7,7 @@ import sys
 import text_detection.find_function_template as td
 
 import os
-
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
-
 
 
 def main():

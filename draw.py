@@ -4,6 +4,9 @@ from keras.models import model_from_yaml
 
 from preprocessing import *
 
+import os
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
 drawing = False  # true if mouse is pressed
 pt1_x, pt1_y = None, None
 width, height = 224, 224
