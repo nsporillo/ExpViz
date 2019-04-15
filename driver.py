@@ -6,6 +6,12 @@ import cv2
 import sys
 import text_detection.find_function_template as td
 
+import os
+
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
+
+
 def main():
     #get_new_template('text_detection/simple.jpg')
     formerequation = ''
@@ -27,7 +33,7 @@ def main():
         if img is None:
             continue
         try:
-            equation = classify.process(img, 0.1, debug=True)
+            equation = classify.process(img, 0.1, debug=False)
             if equation == formerequation:
                 continue
             formerequation = equation
