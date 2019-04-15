@@ -38,28 +38,54 @@ def getSubImage(image,template):
 
 def iterative_template_match(template, image):
 
-	orb = cv2.ORB_create()
+	image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+	orb = cv2.ORB_create(nfeatures=5000, nlevels=8, scoreType=cv2.ORB_HARRIS_SCORE)
 
 	cv2.namedWindow('template', cv2.WINDOW_NORMAL)
+	cv2.namedWindow('boxed', cv2.WINDOW_NORMAL)
+
 
 	kp1, des1 = orb.detectAndCompute(template, None)
 	kp2, des2 = orb.detectAndCompute(image, None)
 
-	bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+	FLANN_INDEX_LSH = 6
+	index_params= dict(	algorithm = FLANN_INDEX_LSH,
+						table_number = 6, # 12
+						key_size = 12,     # 20
+						multi_probe_level = 1) #2
+	search_params = dict(checks=50)
+	flann = cv2.FlannBasedMatcher(index_params,search_params)
 
-	matches = bf.match(des1,des2)
+	matches = flann.match(des1,des2)
 
 	matches = sorted(matches, key = lambda x:x.distance)
 
-	img3 = None
-	img3 = cv2.drawMatches(template,kp1,image,kp2,matches[:10], flags=2, outImg=img3)
-	cv2.imshow('template', img3)
-	cv2.waitKey(10)
+	good_matches = matches[:5]
 
-	#for match in matches:
-	#	print(match.distance)
+	src_pts = np.float32([ kp1[m.queryIdx].pt for m in good_matches ]).reshape(-1,1,2)
+	dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good_matches ]).reshape(-1,1,2)
+	M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
+	matchesMask = mask.ravel().tolist()
+	h,w = template.shape[:2]
+	pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+	if M is not None:
+		dst = cv2.perspectiveTransform(pts,M)
+		dst += (w, 0)  # adding offset
 
-	print(sum([x.distance for x in matches]))
+		draw_params = dict( matchColor = (0,255,0), # draw matches in green color
+							singlePointColor = None,
+							matchesMask = matchesMask, # draw only inliers
+							flags = 2)
+
+		img3 = cv2.drawMatches(template,kp1,image,kp2,good_matches, None,**draw_params)
+
+		# Draw bounding box in Red
+		img3 = cv2.polylines(img3, [np.int32(dst)], True, (0,0,255),3, cv2.LINE_AA)
+
+		cv2.imshow("boxed", img3)
+		cv2.waitKey(10)
+
 	# (tH, tW) = template.shape[:2]
 
 	# # convert the image to grayscale, and initialize the

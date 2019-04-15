@@ -47,11 +47,6 @@ def get_new_template(dest):
         ret, frame = cap.read()
         cv2.imshow("New Template (press 'q' to ignore)", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-        if cv2.waitKey(1) & 0xFF == ord(' '):
-            frame = cv2.pyrDown(frame)
-            frame = cv2.pyrDown(frame)
-            frame = cv2.pyrDown(frame)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             cv2.imwrite(dest, frame)
             return
