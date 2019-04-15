@@ -38,99 +38,42 @@ def getSubImage(image,template):
 
 def iterative_template_match(template, image):
 
-	image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+	cv2.namedWindow('test', cv2.WINDOW_NORMAL)
 
-	orb = cv2.ORB_create(nfeatures=5000, nlevels=8, scoreType=cv2.ORB_HARRIS_SCORE)
+	img = image
+	img = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+	lower_blue= np.array([78,158,124])
+	upper_blue = np.array([138,255,255])
 
-	cv2.namedWindow('template', cv2.WINDOW_NORMAL)
-	cv2.namedWindow('boxed', cv2.WINDOW_NORMAL)
+	mask = cv2.inRange(img,lower_blue,upper_blue)
 
+	blues = np.where((img[...,0]>100)&(img[...,0]<135)&(img[...,2]>50)&(img[...,1]>25))
 
-	kp1, des1 = orb.detectAndCompute(template, None)
-	kp2, des2 = orb.detectAndCompute(image, None)
-
-	FLANN_INDEX_LSH = 6
-	index_params= dict(	algorithm = FLANN_INDEX_LSH,
-						table_number = 6, # 12
-						key_size = 12,     # 20
-						multi_probe_level = 1) #2
-	search_params = dict(checks=50)
-	flann = cv2.FlannBasedMatcher(index_params,search_params)
-
-	matches = flann.match(des1,des2)
-
-	matches = sorted(matches, key = lambda x:x.distance)
-
-	good_matches = matches[:5]
-
-	src_pts = np.float32([ kp1[m.queryIdx].pt for m in good_matches ]).reshape(-1,1,2)
-	dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good_matches ]).reshape(-1,1,2)
-	M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
-	matchesMask = mask.ravel().tolist()
-	h,w = template.shape[:2]
-	pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-	if M is not None:
-		dst = cv2.perspectiveTransform(pts,M)
-		dst += (w, 0)  # adding offset
-
-		draw_params = dict( matchColor = (0,255,0), # draw matches in green color
-							singlePointColor = None,
-							matchesMask = matchesMask, # draw only inliers
-							flags = 2)
-
-		img3 = cv2.drawMatches(template,kp1,image,kp2,good_matches, None,**draw_params)
-
-		# Draw bounding box in Red
-		img3 = cv2.polylines(img3, [np.int32(dst)], True, (0,0,255),3, cv2.LINE_AA)
-
-		cv2.imshow("boxed", img3)
-		cv2.waitKey(10)
-
-	# (tH, tW) = template.shape[:2]
-
-	# # convert the image to grayscale, and initialize the
-	# # bookkeeping variable to keep track of the matched region
-	# gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-	# found = None
- 
-	# # loop over the scales of the image
-	# for scale in np.linspace(0.2, 1.0, 20)[::-1]:
-	# 	# resize the image according to the scale, and keep track
-	# 	# of the ratio of the resizing
-	# 	resized = imutils.resize(gray, width = int(gray.shape[1] * scale))
-	# 	r = gray.shape[1] / float(resized.shape[1])
- 
-	# 	# if the resized image is smaller than the template, then break
-	# 	# from the loop
-	# 	if resized.shape[0] < tH or resized.shape[1] < tW:
-	# 		break
-
-	# 	# detect edges in the resized, grayscale image and apply template
-	# 	# matching to find the template in the image
-	# 	edged = cv2.Canny(resized, 50, 200)
-	# 	result = cv2.matchTemplate(edged, template, cv2.TM_CCOEFF)
-	# 	(_, maxVal, _, maxLoc) = cv2.minMaxLoc(result)
- 
-	# 	# if we have found a new maximum correlation value, then update
-	# 	# the bookkeeping variable
-	# 	if found is None or maxVal > found[0]:
-	# 		found = (maxVal, maxLoc, r)
-	# 	#print(maxVal)
- 
-	# # unpack the bookkeeping variable and compute the (x, y) coordinates
-	# # of the bounding box based on the resized ratio
-	# (_, maxLoc, r) = found
-	# (startX, startY) = (int((maxLoc[0]) * r), int((maxLoc[1]) * r))
-	# (endX, endY) = (int((maxLoc[0]+tW) * r), int((maxLoc[1]+tH) * r))
-	# print(_)
-	# if found[0]<10000000:
-	# 	return None
-	# return (startX, startY, endX, endY)
+	mask = np.zeros(img.shape[:-1], dtype=np.uint8)
+	mask[blues] = 255
+	kernel = np.zeros((5,5),dtype = np.uint8)
+	kernel[:,2] = 1
+	mask = cv2.erode(mask,kernel,iterations=2)
+	mask = cv2.dilate(mask,kernel,iterations=2)
+	#cv2.imshow("test",mask)
+	#cv2.waitKey()
+	components = cv2.connectedComponentsWithStats(mask, 8, cv2.CV_32S)
+	stats = components[2]
+	centroids = components[3]
+	stats = np.append(stats, centroids, axis=1)
+	combine = np.array(sorted(stats, key=lambda x: (x[4])))
+	stats = list(combine[:, :-2])
+	sleft, stop, swidth, sheight, sarea = stats[-2]
+	if sarea<100:
+		return None
+	print((int(sleft),int(stop),int(sleft+swidth),int(stop+sheight)))
+	return  (int(sleft),int(stop),int(sleft+swidth),int(stop+sheight))
 
 
 def get_equation(img, template_box):
 
 	sX, sY, eX, eY = template_box
+	print (template_box)
 	cropped = img[sY:eY, eX:, :]
 	if len(cropped) == 0:
 		return None

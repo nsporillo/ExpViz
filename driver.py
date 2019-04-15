@@ -27,7 +27,7 @@ def main():
         if img is None:
             continue
         try:
-            equation = classify.process(img, 0.1, debug=True)
+            equation = classify.process(img, 0.1)
             if equation == formerequation:
                 continue
             formerequation = equation
