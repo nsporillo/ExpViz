@@ -4,6 +4,8 @@ from keras.models import model_from_yaml
 from matplotlib import pyplot as plt
 import pickle
 
+import graph
+import parse
 from preprocessing import *
 
 model = None
@@ -125,9 +127,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Classify symbols in an image.')
     parser.add_argument('-f', '--file', type=str, help='Image file', required=True)
     parser.add_argument('-mc', '--minconf', type=str, default='30.0', help='Minimum Confidence Threshold')
+    parser.add_argument('-s', '--show', type=bool, default=True, help='Show visualization')
     args = parser.parse_args()
 
     # Load trained model and classify the given image
     model = load_model('bin')
     mapping = pickle.load(open('bin/mapping.p', 'rb'))
-    process(load(args.file), minconf=args.minconf, debug=True)
+    equation = process(load(args.file), minconf=args.minconf, debug=True)
+
+    try:
+        func = parse.parse(equation)
+        graph.graph(func, True)
+        cv.waitKey()
+    except(Exception):
+        print("Equation was not parsable")
+        print("Equation " + equation)
